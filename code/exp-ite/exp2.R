@@ -1,5 +1,4 @@
-########设定########
-
+#########设置###########
 #### 引入库
 library("devtools")
 if(exists("cfcausal:::summary_CI")){
@@ -13,33 +12,33 @@ library("bannerCommenter")
 options(scipen=999)
 
 #### 参数设定
-  suppressPackageStartupMessages(library("argparse"))
-  parser <- ArgumentParser()
-  parser$add_argument("--n", type = "integer", default = 3000, help = "Sample size")
-  parser$add_argument("--d", type = "integer", default = 20, help = "Dimension")
-  parser$add_argument("--gmm_star", type = "double", default = 3, help = "SA parameter, >=1")
-  parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
-  parser$add_argument("--cftype", type="integer", default=2, help="confounding type")
-  parser$add_argument("--dtype", type="character", default='homo', help="data type, homo or het")
-  parser$add_argument("--fct", type="double", default=1, help="shrinkage, <=1")
-  parser$add_argument("--save", type="logical", default=TRUE, help="save")
-  parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
-  parser$add_argument("--ntrial", type = "integer", default =5, help = "number of trials")
-  parser$add_argument("--path", type = "character", default = './loop_fct/', help = "save location")
-  args <- parser$parse_args()
-  n <- args$n
-  d <- args$d
-  alpha <- args$alpha
-  ntrial<- args$ntrial
-  dtype <- args$dtype
-  cftype<- args$cftype
-  fct <- args$fct
-  seed <- args$seed
-  gmm_star <- args$gmm_star
-  save <- args$save
-  path = args$path
-  #分位数
-  q <- c(alpha/2, 1-alpha/2)
+suppressPackageStartupMessages(library("argparse"))
+parser <- ArgumentParser()
+parser$add_argument("--n", type = "integer", default = 3000, help = "Sample size")
+parser$add_argument("--d", type = "integer", default = 20, help = "Dimension")
+parser$add_argument("--gmm_star", type = "double", default = 3, help = "SA parameter, >=1")
+parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
+parser$add_argument("--cftype", type="integer", default=2, help="confounding type")
+parser$add_argument("--dtype", type="character", default='homo', help="data type, homo or het")
+parser$add_argument("--fct", type="double", default=1, help="shrinkage, <=1")
+parser$add_argument("--save", type="logical", default=TRUE, help="save")
+parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
+parser$add_argument("--ntrial", type = "integer", default =5, help = "number of trials")
+parser$add_argument("--path", type = "character", default = './results/ITE/synthetic/', help = "save location")
+args <- parser$parse_args()
+n <- args$n
+d <- args$d
+alpha <- args$alpha
+ntrial<- args$ntrial
+dtype <- args$dtype
+cftype<- args$cftype
+fct <- args$fct
+seed <- args$seed
+gmm_star <- args$gmm_star
+save <- args$save
+path = args$path
+#分位数
+q <- c(alpha/2, 1-alpha/2)
 
 #######产生数据的定义#######
 ##fct=用于数据集缩小的shrinkage factor；如果<0，作变换
@@ -121,7 +120,9 @@ record <- replicate(length(print_list),matrix(0,nrow=ntrial,ncol=3), simplify=FA
 
 ##### 进行ntrial次实验 #####
 for (trial in 1:ntrial){
-  ### 产生观测数据observed
+  ##---------------------------------------------------------------
+  ##                        Generate observed data                         -
+  ##---------------------------------------------------------------
   #X
   X <- Xfun(n,d)
   #e(X)
@@ -139,10 +140,16 @@ for (trial in 1:ntrial){
 
   ### 训练：四种方法得到预测结果
   #BART方法-Bonferroni correction
+  ##----------------------------------------------------------------
+  ##                          bonferroni                           -
+  ##----------------------------------------------------------------
   obj1_ite <- conformal_SA(X, Y1, gmm_star, type = "mean", outfun='RF')
   obj0_ite <- conformal_SA(X, Y0, gmm_star, type = "mean", outfun='RF')
 
   #ITE-NUC
+  ##----------------------------------------------------------------
+  ##      inexact ite method assuming no unobserved confounder     -
+  ##----------------------------------------------------------------
   #conformalCF和conformalITe和sampleCF
   CIfun_inexact <- conformalIte(X, Y_obs, T, alpha = alpha,
                                 algo = "nest", exact=FALSE, type = "CQR",
@@ -150,14 +157,20 @@ for (trial in 1:ntrial){
                                 quantiles = c(alpha/2, 1- (alpha/2)), outfun = "quantRF",  useCV = FALSE)
 
   ##CSA-M和CSA-Q
-  #在第一组上进行训练
+  ##----------------------------------------------------------------
+  ##                       CSA-M and CSA-Q
+  ##----------------------------------------------------------------
+  #在group 1上进行训练
   obj_mean <- nested_conformalSA(X, Y1, Y0, T, gmm_star, type = "mean",quantiles=list(), outfun='RF')
   obj_cqr <- nested_conformalSA(X, Y1, Y0, T, gmm_star, type = "CQR",quantiles=q, outfun='quantRF')
-  #在第二组上获得预测区间
+  #在group 2上获得预测区间
   obj_bands_mean <- predict.nested(obj_mean, X, Y_obs, T, alpha = alpha)
   obj_bands_cqr <- predict.nested(obj_cqr, X, Y_obs, T, alpha = alpha)
 
-  ### 测试
+
+  ##----------------------------------------------------------------
+  ##                        generate testing data                    -
+  ##----------------------------------------------------------------
   ##生成测试数据
   ntest <- 10000
   Xtest <- Xfun(ntest,d)
@@ -174,17 +187,20 @@ for (trial in 1:ntrial){
   Y1test[id1] <- get_Y1obs(Xtest[id1,])
   Y1test[id0] <- samplecf(Xtest[id0,],taufun, sdfun, case=cftype, gmm=gmm_star)
 
+  ##----------------------------------------------------------------
+  ##                       ITE & evaluation                    -
+  ##----------------------------------------------------------------
   ## csa-m&csa-q 进行ite estimation
   ##得到结果如：lower、upper、y1_mean、y0_mean；共ntest行
   #ITE真值
   ite <- Y1test - Y0test
   #CSA-M
-  ci_mean_copy <-fit_and_predict_band(obj_bands_mean,Xtest, 'quantRF')
+  ci_mean_copy <- fit_and_predict_band(obj_bands_mean, Xtest, 'quantRF')
   ci_mean <- shrink(ci_mean_copy, fc=fct)
   ci_mean[, 3] <- ci_mean_copy[,3]
   ci_mean[, 4] <- ci_mean_copy[, 4]
   #CSA-Q
-  ci_cqr_copy <- fit_and_predict_band(obj_bands_cqr,Xtest, 'quantRF')
+  ci_cqr_copy <- fit_and_predict_band(obj_bands_cqr, Xtest, 'quantRF')
   ci_cqr <- shrink(ci_cqr_copy, fc=fct)
   ci_cqr[, 3] <- ci_cqr_copy[,3]
   ci_cqr[, 4] <- ci_cqr_copy[, 4]
@@ -233,9 +249,9 @@ for (trial in 1:ntrial){
 ###创建文件路径
 folder<- paste0(path, dtype)
 if(fct <1){
-  folder <- paste0(folder,"/", "fct_", fct,"/")
+  folder <- paste0(folder,"_", "fct_", fct,"/")
 }else{
-  folder<- paste0(folder, "/","gmm_tmp",gmm_star,"/")
+  folder<- paste0(folder, "_","gmm_",gmm_star,"/")
 }
 print(folder)
 dir.create(folder, recursive=TRUE, showWarnings = FALSE)

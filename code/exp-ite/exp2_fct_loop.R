@@ -1,5 +1,4 @@
-########设定########
-
+#########设置###########
 #### 引入库
 library("devtools")
 if(exists("cfcausal:::summary_CI")){
