@@ -151,3 +151,16 @@ BART <- function(Y, X, Xtest,
     res <- predict(fit, Xtest)
     return(res)
 }
+
+## gradient boosting with huber loss. h2o package needed
+huberBoosting <- function(Y, X, Xtest, huber_alpha = 0.9, ...){
+    predictors <- X
+    response <- Y
+    testdat <- Xtest
+
+    fit <- h2o::h2o.gbm(x = predictors, y = response, 
+                        distribution = "huber", huber_alpha = huber_alpha,
+                        ...)
+    res <- h2o::h2o.predict(fit, newdata = testdat)
+    return(res)
+}
