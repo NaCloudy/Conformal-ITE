@@ -1,0 +1,8 @@
+ntrial = 50
+alpha = 0.2
+n1 = 1000
+n2 = 10000
+errdist = norm/t3
+gamma = 2
+method = rfm/rfq/ite_nuc/naive
+分别对应random forest mean、quantile random forest、ite with no observed confounding、ITE with Bonferroni correction
