@@ -1,0 +1,3 @@
+ntrial = 50
+ntrain = 3000
+ntest = 10000
