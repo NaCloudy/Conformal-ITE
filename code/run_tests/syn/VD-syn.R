@@ -19,11 +19,11 @@ parser$add_argument("--cftype", type="integer", default=2, help="confounding typ
 parser$add_argument("--fct", type="double", default=1, help="shrinkage, <=1")
 parser$add_argument("--save", type="logical", default=TRUE, help="save")
 parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
-parser$add_argument("--ntrial", type = "integer", default = 50, help = "number of trials")
-parser$add_argument("--path", type = "character", default = './results/synthetic/VD-rt.csv', help = "save location")
-parser$add_argument("--ntrain", type = "integer", default = 1000, help = "training numbers")
-parser$add_argument("--ntest", type = "integer", default = 10000, help = "testing numbers")
-parser$add_argument("--errdist", type = "character", default = 'rt', help = "testing numbers")
+parser$add_argument("--ntrial", type = "integer", default = 50, help = "number of trials,50")
+parser$add_argument("--path", type = "character", default = './results/synthetic/VD/', help = "save location")
+parser$add_argument("--ntrain", type = "integer", default = 3000, help = "training numbers,3000")
+parser$add_argument("--ntest", type = "integer", default = 10000, help = "testing numbers,10000")
+parser$add_argument("--errdist", type = "character", default = 't3', help = "error distribution,norm,t3,norm_p")
 args <- parser$parse_args()
 alpha <- args$alpha
 gmm_star <- args$gmm_star
@@ -46,20 +46,17 @@ A <- as.numeric(vd$Group == "A")
 # 定义协变量矩阵
 Xdata <- vd[, c("Sex", "Age", "Height", "BW","FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0","TIMP0","MMP0","P3NP0")]
 
-#后面是离散数据
-
-
+# 后面是离散数据
 #X1 <- model.matrix(~ . - 1, X)
 #x1<-X1[, 1]#取第一列做pscore
 #x1<-(x1-min(x1))/(max(x1)-min(x1))#归一化
 #try<-(1 + pbeta(1-x1, 2, 4)) / 4
 #hist(try)
 #感觉有点奇怪，难道我要给所有数据都打一个归一化补丁吗
+R <- cov(Xdata[,-c(1:2)]) # 连续变量的样本协方差
+m <- colMeans(Xdata[,-c(1:2)]) # 连续变量样本均值
 
-Xfun<-function(n1,X){#需要读入原始数据矩阵X和需要生成的样本个数n1
-  R<-cov(X[,-c(1,2)])#连续变量的样本协方差
-  m<-colMeans(X[,-c(1,2)])#连续变量样本均值
-  library(MASS)
+Xfun<-function(n1,X,R,m){#需要读入原始数据矩阵X和需要生成的样本个数n1
   mydata<-mvrnorm(n1,m,R)#多元正态分布生成模拟连续数据
   #第一列 性别
   n<-sum(X[,1]-1)#第一列中变量为2的个数
@@ -94,7 +91,6 @@ Xfun<-function(n1,X){#需要读入原始数据矩阵X和需要生成的样本个
   return(X1)
 }
 
-
 sdfun <- function(X){
     rep(1, nrow(X))
 }
@@ -109,11 +105,12 @@ pscorefun <- function(X){
   (1 + pbeta(1-x1, 2, 4)) / 4
 }
 
-
 get_Y1obs <- function(X){
-  if(errdist=='rnorm'){
+  if(errdist=='norm'){
     return(taufun(X) + sdfun(X) * rnorm(dim(X)[1]))
-  }else{
+  }else if(errdist=='norm_p'){
+    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1]))
+  }else if(errdist=='t3'){
     return(taufun(X) + sdfun(X) * rt(dim(X)[1],3))
   }
 }
@@ -123,9 +120,11 @@ taufun0 <- function(X){
 }
 
 get_Y0obs <- function(X){
-  if(errdist=='rnorm'){
+  if(errdist=='norm'){
     return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1]))
-  }else{
+  }else if(errdist=='norm_p'){
+    return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1]))
+  }else if(errdist=='t3'){
     return(taufun0(X) + sdfun(X) * rt(dim(X)[1],3))
   }
 }
@@ -147,8 +146,7 @@ for (trial in 1:ntrial){
   ##---------------------------------------------------------------
   ##                        Generate observed data                         -
   ##---------------------------------------------------------------
-  n1<-1000
-  X<-Xfun(n1,Xdata)
+  X<-Xfun(n1,Xdata,R,m)
   n<-nrow(X)
   ps <- pscorefun(X)
   T <- as.numeric(runif(n)<ps)
@@ -198,8 +196,7 @@ for (trial in 1:ntrial){
   ##----------------------------------------------------------------
 
   ##Testing
-  ntest <- 10000
-  Xtest <- Xfun(ntest,Xdata)
+  Xtest <- Xfun(ntest,Xdata,R,m)
   pstest <- pscorefun(Xtest)
   Ttest <- as.numeric(runif(ntest)<pstest)
   id1 <- which(Ttest==1)
@@ -241,7 +238,6 @@ for (trial in 1:ntrial){
   ci_list <- list(ci_mean, ci_cqr, ci_inexact, ci_ite)
 
 
-
   for(i in 1:length(ci_list)){
     ci <- ci_list[[i]]
     coverage <- mean((ite >= ci[, 1]) & (ite <= ci[, 2]),na.rm = TRUE)
@@ -252,11 +248,42 @@ for (trial in 1:ntrial){
     print(paste0(print_list[i], " coverage, ",coverage, ', lens ', len))
     record[[i]][trial,] <- c(coverage,len,n_inf)
   }
-  print("#################")
+  print(paste0("################# trial ",trial," #################"))
 }
 
-kk<-as.data.frame(record)
-#存储
-if(save){
-  write.csv(kk, path, row.names = FALSE)
+
+##----------------------------------------------------------------
+##                         Save results                         --
+##----------------------------------------------------------------
+
+#create a new path for files
+if(fct <1){
+  folder <- paste0(path,"/", errdist, "/", "fct_", fct,"/") #忽略，我们取fct==1
+}else{
+  folder<- paste0(path, "/", errdist, "/", "gmm_",gmm_star,"/")
 }
+print(folder)
+dir.create(folder, recursive=TRUE, showWarnings = FALSE)
+
+#coverage data
+coverage <-c()
+for (i in 1:length(print_list)){coverage[[i]]<- as.vector(record[[i]][,1])}
+
+data <- data.frame(Coverage=unlist(coverage),
+                   group=rep(c("CSA-M", "CSA-Q", "ITE-NUC", "CSA-B"),
+                             each=ntrial))
+
+if(save){
+  write.csv(data, paste0(folder,'coverage', '.csv'), row.names = FALSE)
+}
+
+#length data
+Interval_length <-c()
+for (i in 1:length(print_list)){Interval_length[[i]]<- as.vector(record[[i]][,2])}
+data <- data.frame(Interval_length= unlist(Interval_length),
+                   group=rep(c("CSA-M","CSA-Q", "ITE-NUC", "CSA-B"),each=ntrial))
+
+if(save){
+  write.csv(data, paste0(folder,'len','.csv'), row.names = FALSE)
+}
+
