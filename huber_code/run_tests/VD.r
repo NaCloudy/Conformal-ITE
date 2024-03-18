@@ -1,4 +1,6 @@
 #########设置###########
+setwd("/Users/niubei/Desktop/Conformal-ITE/huber_code")
+library("h2o")
 options (warn = -1)
 library("devtools")
 if(exists("cfcausal:::summary_CI")){
@@ -31,7 +33,7 @@ q<- c(alpha/2, 1- (alpha/2))
 
 # 导入数据
 # 读取VD数据集
-vd <- read.csv("data/VD.csv")
+vd <- read.csv("/Users/niubei/Desktop/Conformal-ITE/huber_code/data/VD.csv")
 # 筛选处理组和控制组
 A <- as.numeric(vd$Group == "A")
 # 定义协变量矩阵
@@ -70,13 +72,10 @@ for (iter in 1:ntrial){
   # 生成预测区间
   colnames(X) <- c("Sex","Age31.40","Age41.50","Age51.60","Age61.70","Age71.80","Height","BW","FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0","TIMP0","MMP0","P3NP0")
   colnames(Xtest) <- c("Sex","Age31.40","Age41.50","Age51.60","Age61.70","Age71.80","Height","BW","FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0","TIMP0","MMP0","P3NP0")
-  obj_mean <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "mean",quantiles=list(), outfun='RF',psparams = list(bag.fraction = 0.8,n.minobsinnode = 5) )
-  # obj_cqr <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "CQR",quantiles=q, outfun='quantRF',psparams = list(bag.fraction = 0.8,n.minobsinnode = 5))
+  obj_mean <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "mean", outfun='huberBoosting',psparams = list(bag.fraction = 0.8,n.minobsinnode = 5))
   obj_bands_mean <- predict.nested(obj_mean, X, Y_obs, T_obs, alpha = alpha)
-  # obj_bands_cqr <- predict.nested(obj_cqr, X, Y_obs, T_obs, alpha = alpha)
-  ci_mean <- fit_and_predict_band(obj_bands_mean, Xtest,'RF')
-  # ci_cqr <- fit_and_predict_band(obj_bands_cqr, Xtest,'RF')
-
+  ci_mean <- fit_and_predict_band(obj_bands_mean, Xtest,'RF') # 这里不能用huberBoosting算法，否则上下界会一模一样
+  # 目前我还没弄清为什么，暂时先用RF算法
   ci_list <- list(ci_mean)
   print_list <- list("ci_mean")
   data <- cbind(ci_mean)
@@ -84,3 +83,11 @@ for (iter in 1:ntrial){
   df <- as.data.frame(t(data))
   write.csv(data, file=paste0(folder, 'ntrial_', iter, '.csv'))
 }
+
+
+
+
+
+
+
+

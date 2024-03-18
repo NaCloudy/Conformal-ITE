@@ -24,10 +24,10 @@ fit_and_predict_band <- function(object, X_test, cfun, quantiles=c(0.4,0.6),outp
   ##################################################################
 
 
-  low_outparams <- c(list(Y = lower, X = Xval, quantiles = quantiles[1]), outparams)
-  up_outparams <- c(list(Y = upper, X = Xval, quantiles = quantiles[2]), outparams)
+  low_outparams <- c(list(Y = lower, X = Xval), outparams)
+  up_outparams <- c(list(Y = upper, X = Xval), outparams)
 
-
+  # 用huberBoosting会导致上下界完全一样
   low_Cmodel <-  function(X){
     do.call(cfun, c(low_outparams, list(Xtest=X)))
   }
@@ -41,8 +41,9 @@ fit_and_predict_band <- function(object, X_test, cfun, quantiles=c(0.4,0.6),outp
   ##                    predict the interval                     ##
   #################################################################
 
-
-  interval <- data.frame(lower=low_Cmodel(X_test), upper= up_Cmodel(X_test), y1_mean= mean(ite[which(Tval==1)]), y0_mean = mean(ite[which(Tval==0)]))
+  
+  interval <- data.frame(lower=as.vector(low_Cmodel(X_test)), upper= as.vector(up_Cmodel(X_test)), 
+                         y1_mean= mean(ite[which(Tval==1)]), y0_mean = mean(ite[which(Tval==0)]))
 
 
   return(interval)

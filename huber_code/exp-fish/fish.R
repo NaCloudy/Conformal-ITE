@@ -1,4 +1,5 @@
 #########设置###########
+setwd("/Users/niubei/Desktop/Conformal-ITE/huber_code")
 library("devtools")
 if(exists("cfcausal:::summary_CI")){
   rm(list = c("summary_CI"))
@@ -17,7 +18,7 @@ parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
 
 parser$add_argument("--save", type="logical", default=TRUE, help="save")
 parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
-parser$add_argument("--ntrial", type = "integer", default = 5, help = "number of trials")
+parser$add_argument("--ntrial", type = "integer", default = 1, help = "number of trials")
 parser$add_argument("--path", type = "character", default = './results/fish/ITE/', help = "save location")
 args <- parser$parse_args()
 alpha <- args$alpha
@@ -30,7 +31,7 @@ q<- c(alpha/2, 1- (alpha/2))
 
 
 #######数据处理#########
-load('./exp-fish/data/fish.Rda')
+load('/Users/niubei/Desktop/Conformal-ITE/huber_code/exp-fish/data/fish.Rda')
 # 定义high fish consumption
 A <- as.numeric(nhanes.fish$fish.level == "high")
 # 定义协变量矩阵
@@ -68,7 +69,7 @@ for (iter in 1:ntrial){
   # 生成预测区间
   obj_mean <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "mean",outfun='huberBoosting')
   obj_bands_mean <- predict.nested(obj_mean, X, Y_obs, T_obs, alpha = alpha)
-  ci_mean <- fit_and_predict_band(obj_bands_mean, Xtest,'RF')
+  ci_mean <- fit_and_predict_band(obj_bands_mean, Xtest,'huberBoosting')
 
   data <- ci_mean
   colnames(data) <- c("mean_low", "mean_high", "mean_y1_mean","mean_y0_mean")
