@@ -23,7 +23,7 @@ parser$add_argument("--ntrial", type = "integer", default = 5, help = "number of
 parser$add_argument("--path", type = "character", default = './results/synthetic/VD_huber/', help = "save location")
 parser$add_argument("--ntrain", type = "integer", default = 1500, help = "training numbers,3000")
 parser$add_argument("--ntest", type = "integer", default = 5000, help = "testing numbers,10000")
-parser$add_argument("--errdist", type = "character", default = 't3', help = "error distribution,norm,t3,norm_p")
+parser$add_argument("--errdist", type = "character", default = 'heavy', help = "error distribution,norm,heavy,norm_p")
 args <- parser$parse_args()
 alpha <- args$alpha
 gmm_star <- args$gmm_star
@@ -110,8 +110,8 @@ get_Y1obs <- function(X){
     return(taufun(X) + sdfun(X) * rnorm(dim(X)[1]))
   }else if(errdist=='norm_p'){
     return(taufun(X) + sdfun(X) * rnorm(dim(X)[1]))
-  }else if(errdist=='t3'){
-    return(taufun(X) + sdfun(X) * rt(dim(X)[1],3))
+  }else if(errdist=='heavy'){
+    return(taufun(X) + sdfun(X) * rlogis(dim(X)[1], -0.1075211, 1.2992436))
   }
 }
 
@@ -124,8 +124,8 @@ get_Y0obs <- function(X){
     return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1]))
   }else if(errdist=='norm_p'){
     return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1]))
-  }else if(errdist=='t3'){
-    return(taufun0(X) + sdfun(X) * rt(dim(X)[1],3))
+  }else if(errdist=='heavy'){
+    return(taufun0(X) + sdfun(X) * rlogis(dim(X)[1], 0.07311189, 1.08353882))
   }
 }
 
