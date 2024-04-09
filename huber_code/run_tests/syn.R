@@ -15,7 +15,7 @@ options(scipen=999)
 #### 参数设定
 suppressPackageStartupMessages(library("argparse"))
 parser <- ArgumentParser()
-parser$add_argument("--n", type = "integer", default = 300, help = "Sample size")
+parser$add_argument("--n", type = "integer", default = 500, help = "Sample size")
 parser$add_argument("--d", type = "integer", default = 20, help = "Dimension")
 parser$add_argument("--gmm_star", type = "double", default = 3, help = "SA parameter, >=1")
 parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
@@ -24,7 +24,7 @@ parser$add_argument("--dtype", type="character", default='homo', help="data type
 parser$add_argument("--fct", type="double", default=1, help="shrinkage, <=1")
 parser$add_argument("--save", type="logical", default=TRUE, help="save")
 parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
-parser$add_argument("--ntrial", type = "integer", default =5, help = "number of trials")
+parser$add_argument("--ntrial", type = "integer", default =1, help = "number of trials")
 parser$add_argument("--path", type = "character", default = './results/synthetic/try/', help = "save location")
 args <- parser$parse_args()
 n <- args$n
@@ -116,7 +116,7 @@ shrink <- function(set,fc){
 }
 
 ##定义结果的数据结构（全空）
-print_list <- list("sa_mean", "sa_cqr", "ite_nuc", "sa_naive")
+print_list <- list("sa_huber", "sa_mean", "sa_cqr", "ite_nuc", "sa_naive")
 record <- replicate(length(print_list),matrix(0,nrow=ntrial,ncol=3), simplify=FALSE)
 
 ##### 进行ntrial次实验 #####
@@ -164,16 +164,18 @@ for (trial in 1:ntrial){
   #在group 1上进行训练
   obj_mean <- nested_conformalSA(X, Y1, Y0, T, gmm_star, type = "mean",quantiles=list(), outfun='RF')
   obj_cqr <- nested_conformalSA(X, Y1, Y0, T, gmm_star, type = "CQR",quantiles=q, outfun='quantRF')
+  obj_huber <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "mean", quantiles=list(), outfun='huberBoosting')
   #在group 2上获得预测区间
   obj_bands_mean <- predict.nested(obj_mean, X, Y_obs, T, alpha = alpha)
   obj_bands_cqr <- predict.nested(obj_cqr, X, Y_obs, T, alpha = alpha)
+  obj_bands_huber <- predict.nested(obj_huber, X, Y_obs, T_obs, alpha = alpha)
 
 
   ##----------------------------------------------------------------
   ##                        generate testing data                    -
   ##----------------------------------------------------------------
   ##生成测试数据
-  ntest <- 10000
+  ntest <- 1000
   Xtest <- Xfun(ntest,d)
   pstest <- pscorefun(Xtest)
   Ttest <- as.numeric(runif(ntest)<pstest)
@@ -205,6 +207,11 @@ for (trial in 1:ntrial){
   ci_cqr <- shrink(ci_cqr_copy, fc=fct)
   ci_cqr[, 3] <- ci_cqr_copy[,3]
   ci_cqr[, 4] <- ci_cqr_copy[, 4]
+  #CSA-huber
+  ci_huber_copy <- fit_and_predict_band(obj_bands_huber, Xtest,'quantRF')
+  ci_huber <- shrink(ci_huber_copy, fc=fct)
+  ci_huber[, 3] <- ci_cqr_huber[,3]
+  ci_huber[, 4] <- ci_cqr_huber[, 4]
 
   ## bonferroni
   ci0_ite <- predict.conformalmsm(obj0_ite, Xtest,alpha = alpha/2)
@@ -214,8 +221,8 @@ for (trial in 1:ntrial){
   ## ite-nuc
   ci_inexact <- CIfun_inexact(Xtest)
 
-  ## 最后得到四组结果：CSA-M, CSA-Q, ITE-NUC, BART
-  ci_list <- list(ci_mean, ci_cqr, ci_inexact, ci_ite)
+  ## 最后得到四组结果：CSA-huber, CSA-M, CSA-Q, ITE-NUC, BART
+  ci_list <- list(ci_huber, ci_mean, ci_cqr, ci_inexact, ci_ite)
   for(i in 1:length(ci_list)){
     #保形区间
     ci <- ci_list[[i]]

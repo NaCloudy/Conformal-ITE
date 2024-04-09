@@ -1,6 +1,7 @@
 cutoff_SA <- function(score, wt, wt_test, alpha){
   wtlow <- wt$low
   wthigh <- wt$high
+  score <- as.vector(score)
   ord <- order(score)
   score <- score[ord]
   wtlow <- wtlow[ord]
@@ -27,7 +28,7 @@ cutoff_SA <- function(score, wt, wt_test, alpha){
   cutoff <- rep(0,ntest)
 
   if (sum(id_unbounded)>0){
-    cutoff[id_unbounded] <- Inf
+    cutoff[id_unbounded] <- 999999
     cutoff[!id_unbounded] <- score[findn[!id_unbounded]]
   }else{
     cutoff <- score[findn]

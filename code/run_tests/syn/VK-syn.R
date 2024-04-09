@@ -13,7 +13,7 @@ options(scipen=999)
 #### Get parameters
 suppressPackageStartupMessages(library("argparse"))
 parser <- ArgumentParser()
-parser$add_argument("--gmm_star", type = "double", default = 1, help = "SA parameter, >=1")
+parser$add_argument("--gmm_star", type = "double", default = 1.5, help = "SA parameter, >=1")
 parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
 parser$add_argument("--cftype", type="integer", default=2, help="confounding type")
 parser$add_argument("--fct", type="double", default=1, help="shrinkage, <=1")

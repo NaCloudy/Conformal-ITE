@@ -70,6 +70,8 @@ str_outfun <- function(method){
             stop("gbm package needs to be installed")
         }
         return(Boosting)
+    } else if (method == "huberBoosting"){
+        return(huberBoosting)
     } else if (method == "quantBoosting"){
         if (!requireNamespace("gbm")){
             stop("gbm package needs to be installed")
