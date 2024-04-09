@@ -127,74 +127,109 @@ outlier_detect <- function(vec){
 ##### VK
 
 ```{r VK}
-vk <- read.csv("../data/VK2.csv")
-vk$Gender <- ifelse(vk$Gender  == "Male", 1, 0)
-vk$Access <- ifelse(vk$Access  == "AVFistula", 1, 0)
-# 使用ifelse函数，把"Yes"替换为1，把"No"替换为0
-# 将需要变成0-1变量的列进行转换
-# 生成模型矩阵并赋值给mm
-mm <- model.matrix(~ HTN + DM + HCV + Smoking + Heartfailure + ISHD, data = vk)
-# 把mm数据框中的虚拟编码替换到vk数据框中
-# 创建一个向量col_names，存储mm数据框中除了截距项之外的列名
-col_names <- colnames(mm)[-1]
-# 使用for循环遍历col_names向量中的每个元素
-for (col in col_names) {
-  # 使用赋值符号<-把mm数据框中对应列的值覆盖到vk数据框中对应列上
-  vk[, col] <- mm[, col]
-}
-# 筛选处理组和控制组
-A <- as.numeric(vk$T == 1)
-# 定义协变量矩阵
-X <- vk[, c("Gender","HTNYes","DMYes" , "HCVYes","SmokingYes", "HeartfailureYes" ,"ISHDYes","Access","Age","Durationofdialysis", "PTH", "Ca.Pre","PHPre", "CaxPProductPre","MGPPre")]
-X1 <- model.matrix(~ . - 1, X)
-# 定义响应变量
-Y_all <- vk$MGPPost
+# vk <- read.csv("../data/VK2.csv")
+# vk$Gender <- ifelse(vk$Gender  == "Male", 1, 0)
+# vk$Access <- ifelse(vk$Access  == "AVFistula", 1, 0)
+# # 使用ifelse函数，把"Yes"替换为1，把"No"替换为0
+# # 将需要变成0-1变量的列进行转换
+# # 生成模型矩阵并赋值给mm
+# mm <- model.matrix(~ HTN + DM + HCV + Smoking + Heartfailure + ISHD, data = vk)
+# # 把mm数据框中的虚拟编码替换到vk数据框中
+# # 创建一个向量col_names，存储mm数据框中除了截距项之外的列名
+# col_names <- colnames(mm)[-1]
+# # 使用for循环遍历col_names向量中的每个元素
+# for (col in col_names) {
+#   # 使用赋值符号<-把mm数据框中对应列的值覆盖到vk数据框中对应列上
+#   vk[, col] <- mm[, col]
+# }
+# # 筛选处理组和控制组
+# A <- as.numeric(vk$T == 1)
+# # 定义协变量矩阵
+# X <- vk[, c("Gender","HTNYes","DMYes" , "HCVYes","SmokingYes", "HeartfailureYes" ,"ISHDYes","Access","Age","Durationofdialysis", "PTH", "Ca.Pre","PHPre", "CaxPProductPre","MGPPre")]
+# X1 <- model.matrix(~ . - 1, X)
+# # 定义响应变量
+# Y_all <- vk$MGPPost
+# 
+# dataset <- "VK"
+# n<- length(Y_all)
+# trainprop <- 0.8
+# set.seed(123)
+# trainid <- sample(n, floor(n * trainprop))
+# set.seed(NULL)
+# 
+# # 训练集数据的划分
+# Y_obs <- Y_all[trainid]
+# X <- X1[trainid,]
+# T_obs <- A[trainid]
+# 
+# Y1 <- Y_obs
+# Y1[which(T_obs==0)] <- NA
+# 
+# Y0 <- Y_obs
+# Y0[which(T_obs==1)] <- NA
+# 
+# id <- seq(1, n)
+# testid<- id[!(id %in% trainid)]
+# Xtest <- X1[testid,]
+# 
+# # 训练模型并获取残差
+# Xtrain.1 <- X[T_obs==1,]
+# Ytrain.1 <- Y1[T_obs==1]
+# Ymodel.1 <- function(X){
+#   outparams <- c(list(Y = Ytrain.1, X = Xtrain.1, quantiles = list()), outparams = list())
+#   do.call("RF", c(outparams, list(Xtest = X)))
+# }
+# residual.1 <- Ytrain.1 - Ymodel.1(Xtrain.1)
+# 
+# Xtrain.0 <- X[T_obs==0,]
+# Ytrain.0 <- Y0[T_obs==0]
+# Ymodel.0 <- function(X){
+#   outparams <- c(list(Y = Ytrain.0, X = Xtrain.0, quantiles = list()), outparams = list())
+#   do.call("RF", c(outparams, list(Xtest = X)))
+#   }
+# residual.0 <- Ytrain.0 - Ymodel.0(Xtrain.0)
+```
 
+```{r store}
+# 存储两个向量为CSV文件
+# folder_0 <- paste0(path, dataset,"_residual_0.csv")
+# write.csv(residual.0, folder_0, row.names = FALSE)
+# folder_1 <- paste0(path, dataset,"_residual_1.csv")
+# write.csv(residual.1, folder_1, row.names = FALSE)
+```
+
+```{r read VK}
+# 从数据框中提取两个向量
 dataset <- "VK"
-n<- length(Y_all)
-trainprop <- 0.8
-set.seed(123)
-trainid <- sample(n, floor(n * trainprop))
-set.seed(NULL)
+folder_0 <- paste0(path, dataset,"_residual_0.csv")
+VK.0 <- read.csv(folder_0)$x
+folder_1 <- paste0(path, dataset,"_residual_1.csv")
+VK.1 <- read.csv(folder_1)$x
+```
 
-# 训练集数据的划分
-Y_obs <- Y_all[trainid]
-X <- X1[trainid,]
-T_obs <- A[trainid]
+```{r density try}
+# 绘制残差核密度图并保存
+folder<- paste0(path, dataset,"_density.png")
+png(folder,
+    width = 7, 
+    height = 5,
+    units = "in",
+    bg = "white",
+    res = 300)
+par(mfrow=c(1,2))
+plot(density(VK.0))
+plot(density(VK.1))
+par(mfrow=c(1,1))
+dev.off()
+```
 
-Y1 <- Y_obs
-Y1[which(T_obs==0)] <- NA
-
-Y0 <- Y_obs
-Y0[which(T_obs==1)] <- NA
-
-id <- seq(1, n)
-testid<- id[!(id %in% trainid)]
-Xtest <- X1[testid,]
-
-# 训练模型并获取残差
-Xtrain.1 <- X[T_obs==1,]
-Ytrain.1 <- Y1[T_obs==1]
-Ymodel.1 <- function(X){
-  outparams <- c(list(Y = Ytrain.1, X = Xtrain.1, quantiles = list()), outparams = list())
-  do.call("RF", c(outparams, list(Xtest = X)))
-}
-residual.1 <- Ytrain.1 - Ymodel.1(Xtrain.1)
-
-Xtrain.0 <- X[T_obs==0,]
-Ytrain.0 <- Y0[T_obs==0]
-Ymodel.0 <- function(X){
-  outparams <- c(list(Y = Ytrain.0, X = Xtrain.0, quantiles = list()), outparams = list())
-  do.call("RF", c(outparams, list(Xtest = X)))
-  }
-residual.0 <- Ytrain.0 - Ymodel.0(Xtrain.0)
-
+```{r }
 print("T = 1")
-outlier_detect(residual.1)
+outlier_detect(VK.1)
 print("T = 0")
-outlier_detect(residual.0)
+outlier_detect(VK.0)
 print("All")
-outlier_detect(c(residual.0, residual.1))
+outlier_detect(c(VK.0, VK.1))
 
 # 绘制残差箱线图并保存
 folder<- paste0(path, dataset,"_box.png")
@@ -205,9 +240,9 @@ png(folder,
     bg = "white",
     res = 300)
 par(mfrow=c(1,3))
-boxplot(residual.1, col = 'yellow', main = "residual of t = 1")
-boxplot(residual.0, col = 'pink', main = "residual of t = 0")
-boxplot(c(residual.0,residual.1), col = 'grey', main = "residual")
+boxplot(VK.1, col = 'yellow', main = "residual of t = 1")
+boxplot(VK.0, col = 'pink', main = "residual of t = 0")
+boxplot(c(VK.0,VK.1), col = 'grey', main = "residual")
 par(mfrow=c(1,1))
 dev.off()
 ```
@@ -215,64 +250,83 @@ dev.off()
 ##### VD
 
 ```{r vd}
-vd <- read.csv("../data/VD.csv")
-# 筛选处理组和控制组
-A <- as.numeric(vd$Group == "A")
-# 定义协变量矩阵
-X <- vd[, c("Sex", "Age",
-            "Height", "BW", #"BMI",
-            "FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0",
-            "TIMP0","MMP0","P3NP0")]
-X[X$Sex == 2,]$Sex <- 0
-X1 <- model.matrix(~ . - 1, X)
-# 定义响应变量
-Y_all <- vd$TGF6
+# vd <- read.csv("../data/VD.csv")
+# # 筛选处理组和控制组
+# A <- as.numeric(vd$Group == "A")
+# # 定义协变量矩阵
+# X <- vd[, c("Sex", "Age",
+#             "Height", "BW", #"BMI",
+#             "FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0",
+#             "TIMP0","MMP0","P3NP0")]
+# X[X$Sex == 2,]$Sex <- 0
+# X1 <- model.matrix(~ . - 1, X)
+# # 定义响应变量
+# Y_all <- vd$TGF6
+# 
+# dataset <- "VD"
+# n<- length(Y_all)
+# trainprop <- 0.8
+# set.seed(123)
+# trainid <- sample(n, floor(n * trainprop))
+# set.seed(NULL)
+# 
+# # 训练集数据的划分
+# Y_obs <- Y_all[trainid]
+# X <- X1[trainid,]
+# T_obs <- A[trainid]
+# 
+# Y1 <- Y_obs
+# Y1[which(T_obs==0)] <- NA
+# 
+# Y0 <- Y_obs
+# Y0[which(T_obs==1)] <- NA
+# 
+# id <- seq(1, n)
+# testid<- id[!(id %in% trainid)]
+# Xtest <- X1[testid,]
+# 
+# # 训练模型并获取残差
+# Xtrain.1 <- X[T_obs==1,]
+# Ytrain.1 <- Y1[T_obs==1]
+# Ymodel.1 <- function(X){
+#   outparams <- c(list(Y = Ytrain.1, X = Xtrain.1, quantiles = list()), outparams = list())
+#   do.call("RF", c(outparams, list(Xtest = X)))
+# }
+# residual.1 <- Ytrain.1 - Ymodel.1(Xtrain.1)
+# 
+# Xtrain.0 <- X[T_obs==0,]
+# Ytrain.0 <- Y0[T_obs==0]
+# Ymodel.0 <- function(X){
+#   outparams <- c(list(Y = Ytrain.0, X = Xtrain.0, quantiles = list()), outparams = list())
+#   do.call("RF", c(outparams, list(Xtest = X)))
+#   }
+# residual.0 <- Ytrain.0 - Ymodel.0(Xtrain.0)
+```
 
+```{r store}
+# # 存储两个向量为CSV文件
+# folder_0 <- paste0(path, dataset,"_residual_0.csv")
+# write.csv(residual.0, folder_0, row.names = FALSE)
+# folder_1 <- paste0(path, dataset,"_residual_1.csv")
+# write.csv(residual.1, folder_1, row.names = FALSE)
+```
+
+```{r read VD}
+# 从数据框中提取两个向量
 dataset <- "VD"
-n<- length(Y_all)
-trainprop <- 0.8
-set.seed(123)
-trainid <- sample(n, floor(n * trainprop))
-set.seed(NULL)
+folder_0 <- paste0(path, dataset,"_residual_0.csv")
+VD.0 <- read.csv(folder_0)$x
+folder_1 <- paste0(path, dataset,"_residual_1.csv")
+VD.1 <- read.csv(folder_1)$x
+```
 
-# 训练集数据的划分
-Y_obs <- Y_all[trainid]
-X <- X1[trainid,]
-T_obs <- A[trainid]
-
-Y1 <- Y_obs
-Y1[which(T_obs==0)] <- NA
-
-Y0 <- Y_obs
-Y0[which(T_obs==1)] <- NA
-
-id <- seq(1, n)
-testid<- id[!(id %in% trainid)]
-Xtest <- X1[testid,]
-
-# 训练模型并获取残差
-Xtrain.1 <- X[T_obs==1,]
-Ytrain.1 <- Y1[T_obs==1]
-Ymodel.1 <- function(X){
-  outparams <- c(list(Y = Ytrain.1, X = Xtrain.1, quantiles = list()), outparams = list())
-  do.call("RF", c(outparams, list(Xtest = X)))
-}
-residual.1 <- Ytrain.1 - Ymodel.1(Xtrain.1)
-
-Xtrain.0 <- X[T_obs==0,]
-Ytrain.0 <- Y0[T_obs==0]
-Ymodel.0 <- function(X){
-  outparams <- c(list(Y = Ytrain.0, X = Xtrain.0, quantiles = list()), outparams = list())
-  do.call("RF", c(outparams, list(Xtest = X)))
-  }
-residual.0 <- Ytrain.0 - Ymodel.0(Xtrain.0)
-
+```{r }
 print("T = 1")
-outlier_detect(residual.1)
+outlier_detect(VD.1)
 print("T = 0")
-outlier_detect(residual.0)
+outlier_detect(VD.0)
 print("All")
-outlier_detect(c(residual.0, residual.1))
+outlier_detect(c(VD.0, VD.1))
 
 # 绘制残差箱线图并保存
 folder<- paste0(path, dataset,"_box.png")
@@ -283,9 +337,25 @@ png(folder,
     bg = "white",
     res = 300)
 par(mfrow=c(1,3))
-boxplot(residual.1, col = 'yellow', main = "residual of t = 1")
-boxplot(residual.0, col = 'pink', main = "residual of t = 0")
-boxplot(c(residual.0,residual.1), col = 'grey', main = "residual")
+boxplot(VD.1, col = 'yellow', main = "residual of t = 1")
+boxplot(VD.0, col = 'pink', main = "residual of t = 0")
+boxplot(c(VD.0,VD.1), col = 'grey', main = "residual")
+par(mfrow=c(1,1))
+dev.off()
+```
+
+```{r density}
+# 绘制残差核密度图并保存
+folder<- paste0(path, dataset,"_density.png")
+png(folder,
+    width = 7, 
+    height = 5,
+    units = "in",
+    bg = "white",
+    res = 300)
+par(mfrow=c(1,2))
+plot(density(VD.0))
+plot(density(VD.1))
 par(mfrow=c(1,1))
 dev.off()
 ```
