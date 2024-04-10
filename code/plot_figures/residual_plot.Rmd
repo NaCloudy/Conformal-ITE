@@ -17,7 +17,8 @@ library("dplyr")
 library("ggplot2")
 library("bannerCommenter")
 library("readxl")
-library(psych)
+library("psych")
+library("MASS")
 options(scipen=999)
 ```
 
@@ -361,6 +362,8 @@ par(mfrow=c(1,1))
 dev.off()
 ```
 
+##### residual
+
 ```{r study of residual}
 get_distr <- function(X){
   a <- data.frame(
@@ -379,6 +382,9 @@ get_distr(VK.0)
 #fitdistr(VK.0, "t") # cant optimize
 print("logistic")
 fitdistr(VK.0, "logistic") # rlogis(1, -0.524069, 15.708925)
+y<-rlogis(1000, -0.524069, 15.708925)
+d<-density(y)
+plot(d)
 ```
 
 ```{r VK.1,warning=FALSE}
@@ -387,6 +393,9 @@ print("t")
 fitdistr(VK.1, "t")
 print("logistic")
 fitdistr(VK.1, "logistic") # rlogis(1, -99.03384, 326.54018)
+y<-rlogis(1000, -99.03384, 326.54018)
+d<-density(y)
+plot(d)
 ```
 
 ```{r VD.0, warning=FALSE}
@@ -395,6 +404,9 @@ print("t")
 fitdistr(VD.0, "t")
 print("logistic")
 fitdistr(VD.0, "logistic") # rlogis(1, 0.07311189, 1.08353882)
+y<-rlogis(1000, 0.07311189, 1.08353882)
+d<-density(y)
+plot(d)
 ```
 
 ```{r VD.1, warning=FALSE}
@@ -403,9 +415,10 @@ get_distr(VD.1)
 # fitdistr(VD.1, "t") # cant optimize
 print("logistic")
 fitdistr(VD.1, "logistic") # rlogis(1, -0.1075211, 1.2992436)
+y<-rlogis(1000, -0.1075211, 1.2992436)
+d<-density(y)
+plot(d)
 ```
-
-
 
 
 

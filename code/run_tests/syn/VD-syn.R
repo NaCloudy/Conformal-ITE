@@ -108,10 +108,10 @@ pscorefun <- function(X){
 get_Y1obs <- function(X){
   if(errdist=='norm'){
     return(taufun(X) + sdfun(X) * rnorm(dim(X)[1]))
-  }else if(errdist=='norm_p'){
-    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1]))
   }else if(errdist=='heavy'){
     return(taufun(X) + sdfun(X) * rlogis(dim(X)[1], -0.1075211, 1.2992436))
+  }else if(errdist=='norm_p'){
+    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1], 0, 2.5))
   }
 }
 
@@ -122,10 +122,14 @@ taufun0 <- function(X){
 get_Y0obs <- function(X){
   if(errdist=='norm'){
     return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1]))
-  }else if(errdist=='norm_p'){
-    return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1]))
   }else if(errdist=='heavy'){
     return(taufun0(X) + sdfun(X) * rlogis(dim(X)[1], 0.07311189, 1.08353882))
+  }
+  else if(errdist=='norm_p'){
+    y <- rnorm(dim(X)[1],0,1)
+    sam <- sample(1:dim(X)[1], 0.07*dim(X)[1])
+    y[sam] = y[sam] + 6
+    return(taufun(X) + sdfun(X) * y)
   }
 }
 

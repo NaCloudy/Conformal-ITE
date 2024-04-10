@@ -124,38 +124,48 @@ Xfun<-function(n1,X,R,m){#需要读入原始数据矩阵X和需要生成的样�
   X1<-model.matrix(~ .-1,df )
   return(X1)
 }
+
 sdfun <- function(X){
   rep(1, nrow(X))
 }
+
 taufun <- function(X){
   2 / (1 + exp(-5 * (0.01*X[, 1] - 0.5))) * 2 / (1 + exp(-5 * (0.01*X[, 2] - 0.5)))
 }
+
 pscorefun <- function(X){
   x1<-X[, 1]
   x1<-(x1-min(x1))/(max(x1)-min(x1))
   (1 + pbeta(1-x1, 2, 4)) / 4
 }
+
 get_Y1obs <- function(X){
   if(errdist=='norm'){
-    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1]))
-  }else if(errdist=='norm_p'){
-    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1]))
+    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1],0,400))
   }else if(errdist=='heavy'){
     return(taufun(X) + sdfun(X) * rlogis(dim(X)[1], -99.03384, 326.54018))
+  }else if(errdist=='norm_p'){
+    y <- rnorm(dim(X)[1],0,400)
+    sam <- sample(1:dim(X)[1], 0.1*dim(X)[1])
+    y[sam] = y[sam] + 1500
+    return(taufun(X) + sdfun(X) * y)
   }
 }
+
 taufun0 <- function(X){
   taufun(X) + 10*sin(X[, 3])*(1/(1+exp(-0.05*X[, 3])))
 }
+
 get_Y0obs <- function(X){
   if(errdist=='norm'){
-    return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1]))
-  }else if(errdist=='norm_p'){
-    return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1]))
+    return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1],0,30))
   }else if(errdist=='heavy'){
     return(taufun0(X) + sdfun(X) * rlogis(dim(X)[1], -0.524069, 15.708925))
+  }else if(errdist=='norm_p'){
+    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1],0,30))
   }
 }
+
 shrink <- function(set,fc){
   newset <- set
   idx <- is.finite(set[,1])
@@ -164,6 +174,8 @@ shrink <- function(set,fc){
   newset[idx,] <- cbind(center-halflen*fc, center+halflen*fc)
   return(newset)
 }
+
+
 print_list <- list("sa_mean", "sa_cqr", "ite_nuc", "sa_naive")
 record <- replicate(length(print_list),matrix(0,nrow=ntrial,ncol=3), simplify=FALSE)
 for (trial in 1:ntrial){
