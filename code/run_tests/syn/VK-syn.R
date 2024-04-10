@@ -15,7 +15,7 @@ options(scipen=999)
 #### Get parameters
 suppressPackageStartupMessages(library("argparse"))
 parser <- ArgumentParser()
-parser$add_argument("--gmm_star", type = "double", default = 1.5, help = "SA parameter, >=1")
+# parser$add_argument("--gmm_star", type = "double", default = 1.5, help = "SA parameter, >=1")
 parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
 parser$add_argument("--cftype", type="integer", default=2, help="confounding type")
 parser$add_argument("--fct", type="double", default=1, help="shrinkage, <=1")
@@ -25,17 +25,17 @@ parser$add_argument("--ntrial", type = "integer", default = 1, help = "number of
 parser$add_argument("--path", type = "character", default = './results/synthetic/VK_huber/', help = "save location")
 parser$add_argument("--ntrain", type = "integer", default = 1500, help = "training numbers,3000")
 parser$add_argument("--ntest", type = "integer", default = 5000, help = "testing numbers,10000")
-parser$add_argument("--errdist", type = "character", default = 'heavy', help = "error distribution,norm,heavy,norm_p")
+# parser$add_argument("--errdist", type = "character", default = 'heavy', help = "error distribution,norm,heavy,norm_p")
 parser$add_argument("--huber_alpha", type = "integer", default = 0.1, help = "huber alpha, [0,1]")
 args <- parser$parse_args()
 alpha <- args$alpha
-gmm_star <- args$gmm_star
+# gmm_star <- args$gmm_star
 cftype<- args$cftype
 fct <- args$fct
 ntrial<- args$ntrial
 seed <- args$seed
 save <- args$save
-errdist <- args$errdist
+# errdist <- args$errdist
 n1 <- args$ntrain   # 训练集个数
 ntest <- args$ntest # 测试集个数
 path <- args$path
@@ -183,170 +183,177 @@ shrink <- function(set,fc){
 print_list <- list("sa_huber", "sa_mean", "sa_cqr", "ite_nuc", "sa_naive")
 record <- replicate(length(print_list),matrix(0,nrow=ntrial,ncol=3), simplify=FALSE)
 
-for (trial in 1:ntrial){
-  ##---------------------------------------------------------------
-  ##                        Generate observed data                         -
-  ##---------------------------------------------------------------
-  X<-Xfun(n1,X1,R,m)
-  n<-nrow(X)
-  ps <- pscorefun(X)
-  T <- as.numeric(runif(n)<ps)
+gmm_values <- seq(1, 3, by = 0.5) # 创建一个从1到3的序列，步长为0.5
+errdist_values <- c("norm", "heavy", "norm_p") # errdist的值数组
 
-  Y0 <- get_Y0obs(X)
-  Y1 <- get_Y1obs(X)
+for(errdist in errdist_values){
+  for(gmm_star in gmm_values){
+    for (trial in 1:ntrial){
+      ##---------------------------------------------------------------
+      ##                        Generate observed data                         -
+      ##---------------------------------------------------------------
+      X<-Xfun(n1,X1,R,m)
+      n<-nrow(X)
+      ps <- pscorefun(X)
+      T <- as.numeric(runif(n)<ps)
 
-  Y_obs <- Y1*T + Y0*(1-T)
+      Y0 <- get_Y0obs(X)
+      Y1 <- get_Y1obs(X)
 
-  Y1[which(T==0)] <- NA
-  Y0[which(T==1)] <- NA
+      Y_obs <- Y1*T + Y0*(1-T)
 
-  ##----------------------------------------------------------------
-  ##                          bonferroni                           -
-  ##----------------------------------------------------------------
+      Y1[which(T==0)] <- NA
+      Y0[which(T==1)] <- NA
 
-  obj1_ite <- conformal_SA(X, Y1, gmm_star, type = "mean", outfun='RF')
-  obj0_ite <- conformal_SA(X, Y0, gmm_star, type = "mean", outfun='RF')
+      ##----------------------------------------------------------------
+      ##                          bonferroni                           -
+      ##----------------------------------------------------------------
 
-  ##----------------------------------------------------------------
-  ##      inexact ite method assuming no unobserved confounder     -
-  ##----------------------------------------------------------------
+      obj1_ite <- conformal_SA(X, Y1, gmm_star, type = "mean", outfun='RF')
+      obj0_ite <- conformal_SA(X, Y0, gmm_star, type = "mean", outfun='RF')
 
-
-  CIfun_inexact <- conformalIte(X, Y_obs, T, alpha = alpha,
-                                algo = "nest", exact=FALSE, type = "CQR",
-                                #lofun = 'RF', upfun = 'RF', citype = "mean",
-                                quantiles = c(alpha/2, 1- (alpha/2)), outfun = "quantRF",  useCV = FALSE)
+      ##----------------------------------------------------------------
+      ##      inexact ite method assuming no unobserved confounder     -
+      ##----------------------------------------------------------------
 
 
-  ##----------------------------------------------------------------
-  ##                            Train on Group1
-  ##----------------------------------------------------------------
-  obj_mean <- nested_conformalSA(X, Y1, Y0, T, gmm_star, type = "mean",quantiles=list(), outfun='RF')
-  obj_cqr <- nested_conformalSA(X, Y1, Y0, T, gmm_star, type = "CQR",quantiles=q, outfun='quantRF')
-  obj_huber <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "mean", quantiles=list(), outfun='huberBoosting', outparams=list(huber_alpha = huber_alpha))
-  ##先把数据集随机分成两组，在其中一组中使用算法一，算法一分别对treated组和control组做，记录下参数与拟合的函数
-  ##----------------------------------------------------------------
-  ##                  getting prediction bands on Group2
-  ##----------------------------------------------------------------
-  obj_bands_mean <- predict.nested(obj_mean, X, Y_obs, T, alpha = alpha)
-  obj_bands_cqr <- predict.nested(obj_cqr, X, Y_obs, T, alpha = alpha)
-  obj_bands_huber <- predict.nested(obj_huber, X, Y_obs, T, alpha = alpha)
+      CIfun_inexact <- conformalIte(X, Y_obs, T, alpha = alpha,
+                                    algo = "nest", exact=FALSE, type = "CQR",
+                                    #lofun = 'RF', upfun = 'RF', citype = "mean",
+                                    quantiles = c(alpha/2, 1- (alpha/2)), outfun = "quantRF",  useCV = FALSE)
 
-  ##对于另外一组，使用另外一组做出预测区间，并检查预测区间的覆盖率。也就是stepII的步骤2.4
 
-  ##----------------------------------------------------------------
-  ##                        generate testing data                    -
-  ##----------------------------------------------------------------
+      ##----------------------------------------------------------------
+      ##                            Train on Group1
+      ##----------------------------------------------------------------
+      obj_mean <- nested_conformalSA(X, Y1, Y0, T, gmm_star, type = "mean",quantiles=list(), outfun='RF')
+      obj_cqr <- nested_conformalSA(X, Y1, Y0, T, gmm_star, type = "CQR",quantiles=q, outfun='quantRF')
+      obj_huber <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "mean", quantiles=list(), outfun='huberBoosting', outparams=list(huber_alpha = huber_alpha))
+      ##先把数据集随机分成两组，在其中一组中使用算法一，算法一分别对treated组和control组做，记录下参数与拟合的函数
+      ##----------------------------------------------------------------
+      ##                  getting prediction bands on Group2
+      ##----------------------------------------------------------------
+      obj_bands_mean <- predict.nested(obj_mean, X, Y_obs, T, alpha = alpha)
+      obj_bands_cqr <- predict.nested(obj_cqr, X, Y_obs, T, alpha = alpha)
+      obj_bands_huber <- predict.nested(obj_huber, X, Y_obs, T, alpha = alpha)
 
-  ##Testing
-  Xtest <- Xfun(ntest,X1,R,m)
-  pstest <- pscorefun(Xtest)
-  Ttest <- as.numeric(runif(ntest)<pstest)
-  id1 <- which(Ttest==1)
-  id0 <- which(Ttest==0)
+      ##对于另外一组，使用另外一组做出预测区间，并检查预测区间的覆盖率。也就是stepII的步骤2.4
 
-  Y0test <- rep(NA,ntest)
-  Y0test[id0] <- get_Y0obs(Xtest[id0,])
-  Y0test[id1] <- samplecf(Xtest[id1,], taufun0, sdfun, case=cftype, gmm=gmm_star)
+      ##----------------------------------------------------------------
+      ##                        generate testing data                    -
+      ##----------------------------------------------------------------
 
-  #这里用的是case2，也就是appendix C里的方法产生反事实预测Y0
-  Y1test <- rep(NA,ntest)
-  Y1test[id1] <- get_Y1obs(Xtest[id1,])
-  Y1test[id0] <- samplecf(Xtest[id0,],taufun, sdfun, case=cftype, gmm=gmm_star)
+      ##Testing
+      Xtest <- Xfun(ntest,X1,R,m)
+      pstest <- pscorefun(Xtest)
+      Ttest <- as.numeric(runif(ntest)<pstest)
+      id1 <- which(Ttest==1)
+      id0 <- which(Ttest==0)
 
-  ##----------------------------------------------------------------
-  ##                       ITE & evaluation                    -
-  ##----------------------------------------------------------------
+      Y0test <- rep(NA,ntest)
+      Y0test[id0] <- get_Y0obs(Xtest[id0,])
+      Y0test[id1] <- samplecf(Xtest[id1,], taufun0, sdfun, case=cftype, gmm=gmm_star)
 
-  ite <- Y1test - Y0test
+      #这里用的是case2，也就是appendix C里的方法产生反事实预测Y0
+      Y1test <- rep(NA,ntest)
+      Y1test[id1] <- get_Y1obs(Xtest[id1,])
+      Y1test[id0] <- samplecf(Xtest[id0,],taufun, sdfun, case=cftype, gmm=gmm_star)
 
-  ci_mean_copy <-fit_and_predict_band(obj_bands_mean,Xtest, 'quantRF')
-  ci_mean <-shrink(ci_mean_copy, fc=fct)#csq-m
-  ci_mean[, 3] <- ci_mean_copy[,3]
-  ci_mean[, 4] <- ci_mean_copy[, 4]
+      ##----------------------------------------------------------------
+      ##                       ITE & evaluation                    -
+      ##----------------------------------------------------------------
 
-  ci_cqr_copy <- fit_and_predict_band(obj_bands_cqr,Xtest, 'quantRF')
-  ci_cqr <- shrink(ci_cqr_copy, fc=fct)#csa-q
-  ci_cqr[, 3] <- ci_cqr_copy[,3]
-  ci_cqr[, 4] <- ci_cqr_copy[, 4]
+      ite <- Y1test - Y0test
 
-  #CSA-huber
-  ci_huber_copy <- fit_and_predict_band(obj_bands_huber, Xtest,'quantRF')
-  ci_huber <- shrink(ci_huber_copy, fc=fct)
-  ci_huber[, 3] <- ci_huber[,3]
-  ci_huber[, 4] <- ci_huber[, 4]
+      ci_mean_copy <-fit_and_predict_band(obj_bands_mean,Xtest, 'quantRF')
+      ci_mean <-shrink(ci_mean_copy, fc=fct)#csq-m
+      ci_mean[, 3] <- ci_mean_copy[,3]
+      ci_mean[, 4] <- ci_mean_copy[, 4]
 
-  #bonferroni
-  ci0_ite <- predict.conformalmsm(obj0_ite, Xtest,alpha = alpha/2)
-  ci1_ite <- predict.conformalmsm(obj1_ite, Xtest,alpha = alpha/2)
-  ci_ite <- cbind(ci1_ite[,1] - ci0_ite[,2], ci1_ite[,2] - ci0_ite[,1])
+      ci_cqr_copy <- fit_and_predict_band(obj_bands_cqr,Xtest, 'quantRF')
+      ci_cqr <- shrink(ci_cqr_copy, fc=fct)#csa-q
+      ci_cqr[, 3] <- ci_cqr_copy[,3]
+      ci_cqr[, 4] <- ci_cqr_copy[, 4]
 
-  #ite-nuc
-  ci_inexact <- CIfun_inexact(Xtest)
+      #CSA-huber
+      ci_huber_copy <- fit_and_predict_band(obj_bands_huber, Xtest,'quantRF')
+      ci_huber <- shrink(ci_huber_copy, fc=fct)
+      ci_huber[, 3] <- ci_huber[,3]
+      ci_huber[, 4] <- ci_huber[, 4]
 
-  ## 最后得到四组结果：CSA-huber, CSA-M, CSA-Q, ITE-NUC, BART
-  ci_list <- list(ci_huber, ci_mean, ci_cqr, ci_inexact, ci_ite)
+      #bonferroni
+      ci0_ite <- predict.conformalmsm(obj0_ite, Xtest,alpha = alpha/2)
+      ci1_ite <- predict.conformalmsm(obj1_ite, Xtest,alpha = alpha/2)
+      ci_ite <- cbind(ci1_ite[,1] - ci0_ite[,2], ci1_ite[,2] - ci0_ite[,1])
 
-  for(i in 1:length(ci_list)){
-    #保形区间
-    ci <- ci_list[[i]]
-    #区间长度
-    diff <- ci[, 2] - ci[, 1]
-    # 找出符合条件的索引
-    index <- which(diff > 99999) # 人为设定
-    # 将符合条件的值修改为Inf
-    ci[index, 2] <- Inf # 人为修改
-    ci[index, 1] <- Inf # 人为修改
-    diff[index] <- Inf  # 人为修改
+      #ite-nuc
+      ci_inexact <- CIfun_inexact(Xtest)
 
-    #覆盖率
-    coverage <- mean((ite >= ci[, 1]) & (ite <= ci[, 2]),na.rm = TRUE)
-    #平均区间长度（有限值）
-    len <- mean(diff[is.finite(diff)])
-    #无限长度的区间个数
-    n_inf <- sum(is.infinite(diff))
+      ## 最后得到四组结果：CSA-huber, CSA-M, CSA-Q, ITE-NUC, BART
+      ci_list <- list(ci_huber, ci_mean, ci_cqr, ci_inexact, ci_ite)
 
-    #输出
-    print(paste0(print_list[i], " coverage, ",coverage, ', lens ', len))
-    #第i组，第trial次实验的：覆盖率、区间长度、差值（区间长度）是否有限
-    record[[i]][trial,] <- c(coverage,len,n_inf)
+      for(i in 1:length(ci_list)){
+        #保形区间
+        ci <- ci_list[[i]]
+        #区间长度
+        diff <- ci[, 2] - ci[, 1]
+        # 找出符合条件的索引
+        index <- which(diff > 99999) # 人为设定
+        # 将符合条件的值修改为Inf
+        ci[index, 2] <- Inf # 人为修改
+        ci[index, 1] <- Inf # 人为修改
+        diff[index] <- Inf  # 人为修改
+
+        #覆盖率
+        coverage <- mean((ite >= ci[, 1]) & (ite <= ci[, 2]),na.rm = TRUE)
+        #平均区间长度（有限值）
+        len <- mean(diff[is.finite(diff)])
+        #无限长度的区间个数
+        n_inf <- sum(is.infinite(diff))
+
+        #输出
+        print(paste0(print_list[i], " coverage, ",coverage, ', lens ', len))
+        #第i组，第trial次实验的：覆盖率、区间长度、差值（区间长度）是否有限
+        record[[i]][trial,] <- c(coverage,len,n_inf)
+      }
+      print(paste0("################# trial ",trial," #################"))
+    }
+    ##----------------------------------------------------------------
+    ##                         Save results                         --
+    ##----------------------------------------------------------------
+
+    #create a new path for files
+    if(fct <1){
+      folder <- paste0(path,"/", errdist, "/", "fct_", fct,"/") #忽略，我们取fct==1
+    }else{
+      folder<- paste0(path, "/", errdist, "/", "gmm_",gmm_star,"/")
+    }
+    print(folder)
+    dir.create(folder, recursive=TRUE, showWarnings = FALSE)
+
+    #coverage data
+    coverage <-c()
+    for (i in 1:length(print_list)){coverage[[i]]<- as.vector(record[[i]][,1])}
+
+    data <- data.frame(Coverage=unlist(coverage),
+                       group=rep(c("CSA-huber", "CSA-M", "CSA-Q", "ITE-NUC", "CSA-B"),
+                                 each=ntrial))
+
+    if(save){
+      write.csv(data, paste0(folder,'coverage', '.csv'), row.names = FALSE)
+    }
+
+    #length data
+    Interval_length <-c()
+    for (i in 1:length(print_list)){Interval_length[[i]]<- as.vector(record[[i]][,2])}
+    data <- data.frame(Interval_length= unlist(Interval_length),
+                       group=rep(c("CSA-huber", "CSA-M","CSA-Q", "ITE-NUC", "CSA-B"),each=ntrial))
+
+    if(save){
+      write.csv(data, paste0(folder,'len','.csv'), row.names = FALSE)
+    }
   }
-  print(paste0("################# trial ",trial," #################"))
 }
 
 
-##----------------------------------------------------------------
-##                         Save results                         --
-##----------------------------------------------------------------
-
-#create a new path for files
-if(fct <1){
-  folder <- paste0(path,"/", errdist, "/", "fct_", fct,"/") #忽略，我们取fct==1
-}else{
-  folder<- paste0(path, "/", errdist, "/", "gmm_",gmm_star,"/")
-}
-print(folder)
-dir.create(folder, recursive=TRUE, showWarnings = FALSE)
-
-#coverage data
-coverage <-c()
-for (i in 1:length(print_list)){coverage[[i]]<- as.vector(record[[i]][,1])}
-
-data <- data.frame(Coverage=unlist(coverage),
-                   group=rep(c("CSA-huber", "CSA-M", "CSA-Q", "ITE-NUC", "CSA-B"),
-                             each=ntrial))
-
-if(save){
-  write.csv(data, paste0(folder,'coverage', '.csv'), row.names = FALSE)
-}
-
-#length data
-Interval_length <-c()
-for (i in 1:length(print_list)){Interval_length[[i]]<- as.vector(record[[i]][,2])}
-data <- data.frame(Interval_length= unlist(Interval_length),
-                   group=rep(c("CSA-huber", "CSA-M","CSA-Q", "ITE-NUC", "CSA-B"),each=ntrial))
-
-if(save){
-  write.csv(data, paste0(folder,'len','.csv'), row.names = FALSE)
-}
 
