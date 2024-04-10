@@ -9,21 +9,24 @@ library("dplyr")
 library("ggplot2")
 library("bannerCommenter")
 library(MASS)
+library("h2o")
+h2o.init()
 options(scipen=999)
 #### Get parameters
 suppressPackageStartupMessages(library("argparse"))
 parser <- ArgumentParser()
-parser$add_argument("--gmm_star", type = "double", default = 2, help = "SA parameter, >=1")
+parser$add_argument("--gmm_star", type = "double", default = 1.5, help = "SA parameter, >=1")
 parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
 parser$add_argument("--cftype", type="integer", default=2, help="confounding type")
 parser$add_argument("--fct", type="double", default=1, help="shrinkage, <=1")
 parser$add_argument("--save", type="logical", default=TRUE, help="save")
 parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
-parser$add_argument("--ntrial", type = "integer", default = 5, help = "number of trials,50")
+parser$add_argument("--ntrial", type = "integer", default = 1, help = "number of trials,50")
 parser$add_argument("--path", type = "character", default = './results/synthetic/VD_huber/', help = "save location")
 parser$add_argument("--ntrain", type = "integer", default = 1500, help = "training numbers,3000")
 parser$add_argument("--ntest", type = "integer", default = 5000, help = "testing numbers,10000")
 parser$add_argument("--errdist", type = "character", default = 'heavy', help = "error distribution,norm,heavy,norm_p")
+parser$add_argument("--huber_alpha", type = "integer", default = 0.9, help = "huber alpha, [0,1]")
 args <- parser$parse_args()
 alpha <- args$alpha
 gmm_star <- args$gmm_star
@@ -36,6 +39,7 @@ errdist <- args$errdist
 n1 <- args$ntrain   # 训练集个数
 ntest <- args$ntest # 测试集个数
 path <- args$path
+huber_alpha <- args$huber_alpha
 q<- c(alpha/2, 1- (alpha/2))
 
 # 导入数据
@@ -186,7 +190,7 @@ for (trial in 1:ntrial){
   ##----------------------------------------------------------------
   obj_mean <- nested_conformalSA(X, Y1, Y0, T, gmm_star, type = "mean",quantiles=list(), outfun='RF')
   obj_cqr <- nested_conformalSA(X, Y1, Y0, T, gmm_star, type = "CQR",quantiles=q, outfun='quantRF')
-  obj_huber <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "mean", quantiles=list(), outfun='huberBoosting')
+  obj_huber <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "mean", quantiles=list(), outfun='huberBoosting', outparams=list(huber_alpha = huber_alpha))
   ##先把数据集随机分成两组，在其中一组中使用算法一，算法一分别对treated组和control组做，记录下参数与拟合的函数
   ##----------------------------------------------------------------
   ##                  getting prediction bands on Group2

@@ -21,8 +21,8 @@ nested_conformalSA <- function(X, Y1, Y0, T, gmm,
   ##  USE GROUP 1 to fit the outcome predictors and get Yscores.  ##
   ##################################################################
 
-  obj_treated <- conformal_SA(X[group1id, , drop=FALSE], Y1[group1id], gmm, type = type,  quantiles=quantiles, outfun=outfun, nested=TRUE)
-  obj_control <- conformal_SA(X[group1id, , drop=FALSE], Y0[group1id], gmm, type = type, quantiles=quantiles, outfun=outfun, nested=TRUE)
+  obj_treated <- conformal_SA(X[group1id, , drop=FALSE], Y1[group1id], gmm, type = type,  quantiles=quantiles, outfun=outfun, outparams=outparams, nested=TRUE)
+  obj_control <- conformal_SA(X[group1id, , drop=FALSE], Y0[group1id], gmm, type = type, quantiles=quantiles, outfun=outfun, outparams=outparams, nested=TRUE)
 
   ########################################################################
   ##  fitting propensity score using all the training data from group1  ##
