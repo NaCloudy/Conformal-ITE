@@ -26,7 +26,7 @@ parser$add_argument("--path", type = "character", default = './results/synthetic
 parser$add_argument("--ntrain", type = "integer", default = 1500, help = "training numbers,3000")
 parser$add_argument("--ntest", type = "integer", default = 5000, help = "testing numbers,10000")
 # parser$add_argument("--errdist", type = "character", default = 'heavy', help = "error distribution,norm,heavy,norm_p")
-parser$add_argument("--huber_alpha", type = "integer", default = 0.9, help = "huber alpha, [0,1]")
+parser$add_argument("--huber_alpha", type = "integer", default = 0.7, help = "huber alpha, [0,1]")
 args <- parser$parse_args()
 alpha <- args$alpha
 # gmm_star <- args$gmm_star
