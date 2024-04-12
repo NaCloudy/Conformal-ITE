@@ -32,7 +32,7 @@ get_hist <- function(X1, A_all, Y_all, main) {
   R[-idx] <- 1/record[-idx]
   quantile(R, seq(0, 1, by=.05))
   summary(R)
-  png(paste(main,"_hist.png", sep = ""))
+  png(paste("figures/OR/",main,"_hist.png", sep = ""))
   hist(R, breaks = 10, prob=TRUE, xlab='(Adjusted) odds ratio',main=main,
        cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
   dens <- density(R, from=1, width=1.5)

@@ -33,7 +33,7 @@ get_box <- function(X1, A_all, Y_all, main) {
   quantile(R, seq(0, 1, by=.05))
   summary(R)
   # 将直方图保存为png文件
-  png(paste(main,"_box.png", sep = ""))
+  png(paste("figures/OR/",main,"_box.png", sep = ""))
   # boxplot的标题为main
   boxplot(R, main = main)
   dev.off()

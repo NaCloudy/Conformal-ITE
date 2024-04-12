@@ -1,7 +1,7 @@
 library("readxl")
 # 导入自定义函数
-source("get_hist.R")
-source("get_box.R")
+source("plot_figures/or_plot/get_hist.R")
+source("plot_figures/or_plot/get_box.R")
 ######drug_AS######
 # 导入数据
 # 读取data.xlsx文件的第一个工作表
@@ -60,24 +60,28 @@ for (i in 1:length(datasets)){
 }
 ######vd######
 # 读取data.xlsx文件的第一个工作表
-vd <- read_excel("/Users/niubei/Desktop/保形预测/datasets/Data_set.xlsx", sheet = 1)
+vd <- read.csv("data/VD.csv")
 # 数据预处理
 A <- as.numeric(vd$Group == "A")
 # 定义协变量矩阵
-X <- vd[, c("Sex", "Age", "Height", "BW","FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0","TIMP0","MMP0","P3NP0")]
+X <- vd[, c("Sex", "Age",
+            "Height", "BW", #"BMI",
+            "FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0",
+            "TIMP0","MMP0","P3NP0")]
+X[X$Sex == 2,]$Sex <- 0
 X1 <- model.matrix(~ . - 1, X)
 # 定义响应变量
-Y_all <- log2(vd$TGF6)
-# 调用boosting算法进行预测
+Y_all <- vd$TGF6
+# # 调用boosting算法进行预测
 colnames(X1) <- c("Sex","Age31.40","Age41.50","Age51.60","Age61.70","Age71.80","Height","BW","FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0","TIMP0","MMP0","P3NP0")
-file_name <- "vd"
+file_name <- "Vitamin D"
 get_hist(X1, A, Y_all, file_name)
 get_box(X1, A, Y_all, file_name)
 
 ######vk######
 # 导入数据
 # 读取data.xlsx文件的第一个工作表
-vk <-read.csv('/Users/niubei/Desktop/保形预测/datasets/VK2.csv')
+vk <- read.csv("data/VK2.csv")
 vk$Gender <- ifelse(vk$Gender  == "Male", 1, 0)
 vk$Access <- ifelse(vk$Access  == "AVFistula", 1, 0)
 # 使用ifelse函数，把"Yes"替换为1，把"No"替换为0
@@ -100,6 +104,6 @@ X <- vk[, c("Gender","HTNYes","DMYes" , "HCVYes","SmokingYes", "HeartfailureYes"
 X1 <- model.matrix(~ . - 1, X)
 # 定义响应变量
 Y_all <- vk$MGPPre
-file_name <- "vk"
+file_name <- "Vitamin K"
 get_hist(X1, A, Y_all, file_name)
 get_box(X1, A, Y_all, file_name)
