@@ -21,9 +21,9 @@ parser$add_argument("--cftype", type="integer", default=2, help="confounding typ
 parser$add_argument("--fct", type="double", default=1, help="shrinkage, <=1")
 parser$add_argument("--save", type="logical", default=TRUE, help="save")
 parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
-parser$add_argument("--ntrial", type = "integer", default = 1, help = "number of trials,50")
+parser$add_argument("--ntrial", type = "integer", default = 30, help = "number of trials,50")
 parser$add_argument("--path", type = "character", default = './results/synthetic/VK_huber/', help = "save location")
-parser$add_argument("--ntrain", type = "integer", default = 1500, help = "training numbers,3000")
+parser$add_argument("--ntrain", type = "integer", default = 2000, help = "training numbers,3000")
 parser$add_argument("--ntest", type = "integer", default = 5000, help = "testing numbers,10000")
 # parser$add_argument("--errdist", type = "character", default = 'heavy', help = "error distribution,norm,heavy,norm_p")
 parser$add_argument("--huber_alpha", type = "integer", default = 0.1, help = "huber alpha, [0,1]")
@@ -179,7 +179,6 @@ shrink <- function(set,fc){
   return(newset)
 }
 
-
 print_list <- list("sa_huber", "sa_mean", "sa_cqr", "ite_nuc", "sa_naive")
 record <- replicate(length(print_list),matrix(0,nrow=ntrial,ncol=3), simplify=FALSE)
 
@@ -188,6 +187,16 @@ errdist_values <- c("norm", "heavy", "norm_p") # errdist的值数组
 
 for(errdist in errdist_values){
   for(gmm_star in gmm_values){
+
+    #create a new path for files
+    if(fct <1){
+      folder <- paste0(path,"/", errdist, "/", "fct_", fct,"/") #忽略，我们取fct==1
+    }else{
+      folder<- paste0(path, "/", errdist, "/", "gmm_",gmm_star,"/")
+    }
+    print(folder)
+    dir.create(folder, recursive=TRUE, showWarnings = FALSE)
+
     for (trial in 1:ntrial){
       ##---------------------------------------------------------------
       ##                        Generate observed data                         -
@@ -292,13 +301,24 @@ for(errdist in errdist_values){
       ## 最后得到四组结果：CSA-huber, CSA-M, CSA-Q, ITE-NUC, BART
       ci_list <- list(ci_huber, ci_mean, ci_cqr, ci_inexact, ci_ite)
 
+      ##打印区间
+      data <- cbind(ci_huber, ci_mean, ci_cqr, ci_inexact, ci_ite)
+      colnames(data) <- c(
+        "huber_low", "huber_high", "huber_y1_mean","huber_y0_mean",
+        "mean_low", "mean_high", "mean_y1_mean","mean_y0_mean",
+        "cqr_low", "cqr_high","cqr_y1_mean","cqr_y0_mean",
+        "nuc_low", "nuc_high",
+        "bart_low", "bart_high")
+      df <- as.data.frame(t(data))
+      write.csv(data, file=paste0(folder, 'ntrial_', trial, '.csv'))
+
       for(i in 1:length(ci_list)){
         #保形区间
         ci <- ci_list[[i]]
         #区间长度
         diff <- ci[, 2] - ci[, 1]
         # 找出符合条件的索引
-        index <- which(diff > 99999) # 人为设定
+        index <- which(diff > 9999999) # 人为设定
         # 将符合条件的值修改为Inf
         ci[index, 2] <- Inf # 人为修改
         ci[index, 1] <- Inf # 人为修改
@@ -321,15 +341,6 @@ for(errdist in errdist_values){
     ##----------------------------------------------------------------
     ##                         Save results                         --
     ##----------------------------------------------------------------
-
-    #create a new path for files
-    if(fct <1){
-      folder <- paste0(path,"/", errdist, "/", "fct_", fct,"/") #忽略，我们取fct==1
-    }else{
-      folder<- paste0(path, "/", errdist, "/", "gmm_",gmm_star,"/")
-    }
-    print(folder)
-    dir.create(folder, recursive=TRUE, showWarnings = FALSE)
 
     #coverage data
     coverage <-c()

@@ -276,7 +276,7 @@ for (trial in 1:ntrial){
     #区间长度
     diff <- ci[, 2] - ci[, 1]
     # 找出符合条件的索引
-    index <- which(diff > 99999) # 人为设定
+    index <- which(diff > 9999999) # 人为设定
     # 将符合条件的值修改为Inf
     ci[index, 2] <- Inf # 人为修改
     ci[index, 1] <- Inf # 人为修改
