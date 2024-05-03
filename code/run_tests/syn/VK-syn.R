@@ -1,3 +1,31 @@
+#+eval=FALSE
+Xfun <- function(n1, X, R, m) {
+  mydata <- mvrnorm(n1, m, R)  # 多元正态分布生成模拟连续数据
+  X1 <- matrix(NA, nrow = n1, ncol = ncol(X))  # 初始化结果矩阵
+
+  for (i in 1:ncol(X)) {
+    n <- sum(X[, i])  # 第 i 列中变量为 1 的个数
+    p <- n / nrow(X)  # 计算比例
+    xi <- rmultinom(n = n1, size = 1, prob = c(1 - p, p))  # 生成随机二元变量
+
+    # one-hot编码
+    vi <- matrix(NA, nrow = n1, ncol = 2)
+    vi[which(xi[1, ] == 1), 1] <- 0
+    vi[which(xi[2, ] == 1), 2] <- 1
+
+    # 将结果存储到 X1 中
+    X1 <- cbind(X1, vi)
+  }
+
+  # 将连续数据合并到结果矩阵中
+  df <- as.data.frame(cbind(mydata, X1))
+
+  # 对离散数据进行one-hot处理
+  X1 <- model.matrix(~ . - 1, df)
+
+  return(X1)
+}
+
 #########设置###########
 library("devtools")
 if(exists("cfcausal:::summary_CI")){

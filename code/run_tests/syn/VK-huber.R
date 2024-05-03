@@ -1,3 +1,4 @@
+#+eval=FALSE
 #########设置###########
 library("devtools")
 if(exists("cfcausal:::summary_CI")){

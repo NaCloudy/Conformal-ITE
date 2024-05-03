@@ -1,3 +1,4 @@
+#+eval=FALSE
 #########设置###########
 options (warn = -1)
 library("devtools")
