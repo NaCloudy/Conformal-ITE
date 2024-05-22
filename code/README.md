@@ -1,32 +1,24 @@
-# Conformal Sensitivity Analysis 
+# Conformal Sensitivity Analysis for Invidual Treatment effects
 
-Implemention of conformal sensitivity analysis (CSA) and conformalized sharp sensitivity analysis (CSSA) 
+Application of conformal sensitivity analysis (CSA) for VD dataset and VK dataset.
 
-## This repository
+## Introduction
+* Experiment of CSA-mean, CSA-RF, CSA-huber of simulation data.
+  (hyperparameter and model: based on `figures\OR` and `figures\residual`)
+  code in `run_tests\syn`
+  result in `results\synthetic`
+  figures in `figures\cov_len_shrinkage`
+* Implements Conformal prediction and sensitivity analysis for the ITE on two observational studies. 
+  code in `run_tests`
+  result in `results\ITE`
+  figures in `figures\ITE`
 
-* Provides code to reproduce the simulation results in the paper
-* Implements sensitivity analysis for the ITE on synthetic data and an observational study 
-* Requires the [cfcausal package](https://github.com/lihualei71/cfcausal), which can be installed according to the author's instructions
-```
-library("devtools")
-library("cfcausal")
-devtools::load_all(".")
-```
-## Directories
+## References
 
-* The algorithms are implemented by the R scripts in the folder `./R`
-* The folders `./exp-cf`, `./exp-ite`, `./exp-fish` are the example folders that contain the executable scripts for the simulations in the paper
-
-## Code scripts, results and data
-
-* Each example folder has a directory `./bash` that contain the bash scripts. The bash scripts are used to submit jobs to a cluster, which call the corresponding R scripts to produce and store the results.
-```
-cd ./bash
-bash run_XXX.sh
-```
-* The python script in each example folder can be used to generate the plots in the paper.
-* Each example folder has a directory `./out` that contains the existing numerical results.
-* The fish consumption and blood mercury data is from R package [bootsens](https://github.com/qingyuanzhao/bootsens). The data is also contained in `./exp-fish/data`.
+* https://github.com/mingzhang-yin/conformal-sensitivity-analysis
+* https://github.com/lihualei71/cfcausal
+* https://zenodo.org/records/5794567
+* https://zenodo.org/records/4404285
 
 
 
