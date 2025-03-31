@@ -20,7 +20,7 @@ parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
 parser$add_argument("--save", type="logical", default=TRUE, help="save")
 parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
 parser$add_argument("--ntrial", type = "integer", default = 5, help = "number of trials")
-parser$add_argument("--path", type = "character", default = './results/ITE/VK-log2/', help = "save location")
+parser$add_argument("--path", type = "character", default = './results/ITE/VK-log2-new/', help = "save location")
 args <- parser$parse_args()
 alpha <- args$alpha
 gmm_star <- args$gmm_star

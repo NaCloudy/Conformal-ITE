@@ -69,7 +69,9 @@ quantBoosting <- function(Y, X, Xtest, quantiles, n.trees = 100, ...){
 ## gradient boosting. gbm package needed
 # nTrain * bag.fraction should > n.minobsinnode
 # 24 * 0.5 > 10
-Boosting <- function(Y, X, Xtest, n.trees = 100, ...){
+Boosting <- function(Y, X, Xtest, n.trees = 100
+#, n.minobsinnode = 3, bag.fraction = 0.7
+,...){
   transform <- FALSE
   if(length(class(X))>1){
     transform <- TRUE

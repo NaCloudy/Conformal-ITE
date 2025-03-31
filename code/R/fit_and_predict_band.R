@@ -1,4 +1,5 @@
-fit_and_predict_band <- function(object, X_test, cfun, quantiles=c(0.4,0.6),outparams=list()){
+fit_and_predict_band <- function(object, X_test, testid, cfun, quantiles=c(0.4,0.6),outparams=list(),
+                                 data.seed = data.seed, model.seed = model.seed){
   ########################################################################################
   ##  fit the regression for predicting interval, and predict the interval given data.  ##
   ########################################################################################
@@ -29,21 +30,30 @@ fit_and_predict_band <- function(object, X_test, cfun, quantiles=c(0.4,0.6),outp
 
 
   low_Cmodel <-  function(X){
+    set.seed(model.seed)
     do.call(cfun, c(low_outparams, list(Xtest=X)))
   }
   up_Cmodel <-function(X){
+    set.seed(model.seed)
     do.call(cfun, c(up_outparams, list(Xtest=X)))
   }
-
-
 
   #################################################################
   ##                    predict the interval                     ##
   #################################################################
 
+  lower_b <- low_Cmodel(X_test)
+  upper_b <- up_Cmodel(X_test)
+  effect <- ifelse(lower_b > 0 & upper_b > 0, 1, 
+                ifelse(lower_b < 0 & upper_b < 0, -1, 0))
 
-  interval <- data.frame(lower=low_Cmodel(X_test), upper= up_Cmodel(X_test), y1_mean= mean(ite[which(Tval==1)]), y0_mean = mean(ite[which(Tval==0)]))
-
+  interval <- data.frame(
+    lower=lower_b, 
+    upper=upper_b, 
+    y1_mean= mean(ite[which(Tval==1)]), 
+    y0_mean = mean(ite[which(Tval==0)]),
+    id = testid,
+    effective =effect) # 1=positive, -1=negative, 0=no effect
 
   return(interval)
 }

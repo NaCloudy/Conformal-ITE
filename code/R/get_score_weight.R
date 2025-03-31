@@ -5,7 +5,8 @@ get_score_weight <- function(X1, Y1, gmm,
                              wtfun,
                              trainprop,
                              trainid1,
-                             nested){
+                             nested,
+                             data.seed = data.seed, model.seed = model.seed){
 
   #############
 
@@ -20,6 +21,7 @@ get_score_weight <- function(X1, Y1, gmm,
   # Learn output function on preliminary set with observed Y
   outparams <- c(list(Y = Ytrain, X = Xtrain, quantiles = quantiles), outparams)
   Ymodel <- function(X){
+    set.seed(model.seed)
     do.call(outfun, c(outparams, list(Xtest = X)))
   }
 

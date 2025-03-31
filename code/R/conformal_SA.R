@@ -5,13 +5,16 @@ conformal_SA <- function(X, Y, gmm,
                          outfun=outfun, outparams=list(),
                          psfun=Boosting, psparams=list(),
                          trainprop=0.75, conf_wt=NULL,
-                         nested=FALSE){
+                         nested=FALSE,
+                         data.seed = data.seed, model.seed = model.seed){
 
   T <- as.numeric(!is.na(Y))
   inds1 <- which(T == 1)
   inds0 <- which(T == 0)
   n1 <- length(inds1)
   n0 <- length(inds0)
+
+  set.seed(data.seed)
   trainid1 <- sample(n1, floor(n1 * trainprop))
   trainid0 <- sample(n0, floor(n0 * trainprop))
   trainid <- c(inds1[trainid1], inds0[trainid0])
@@ -50,6 +53,7 @@ conformal_SA <- function(X, Y, gmm,
 
   # Learn weight function on preliminary set
   wtfun <- function(X,gmm){
+    set.seed(model.seed)
     ps <- do.call(psfun, c(list(Xtest = X), psparams))
     if(is.null(conf_wt)){
       return(list(low = 1+(1-ps)/(ps*gmm), high=1+(1-ps)*gmm/ps, pscore=ps))
@@ -69,6 +73,7 @@ conformal_SA <- function(X, Y, gmm,
                              quantiles,
                              outfun, outparams,
                              wtfun,
-                             trainprop, trainid1, nested = nested)
+                             trainprop, trainid1, nested = nested,
+                             data.seed = data.seed, model.seed = model.seed)
   return(object)
 }

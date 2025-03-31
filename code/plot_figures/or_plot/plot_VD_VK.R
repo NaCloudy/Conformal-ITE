@@ -25,7 +25,7 @@ for (i in 1:length(datasets)){
   # 定义响应变量
   Y_all <- data$Diff
   # 将drug_AS和i拼接成字符串，作为文件名
-  file_name <- paste("drug_AS", i, sep = "_")
+  file_name <- paste("drug_AS-10", i, sep = "_")
   get_hist(X1, A, Y_all, file_name)
   get_box(X1, A, Y_all, file_name)
 
@@ -54,7 +54,7 @@ for (i in 1:length(datasets)){
   Y_all <- data$Diff
   # 调用自定义函数
   # 将drug_TS和i拼接成字符串，作为文件名
-  file_name <- paste("drug_TS", i, sep = "_")
+  file_name <- paste("drug_TS-10", i, sep = "_")
   get_hist(X1, A, Y_all, file_name)
   get_box(X1, A, Y_all, file_name)
 }
@@ -74,7 +74,7 @@ X1 <- model.matrix(~ . - 1, X)
 Y_all <- vd$TGF6
 # # 调用boosting算法进行预测
 colnames(X1) <- c("Sex","Age31.40","Age41.50","Age51.60","Age61.70","Age71.80","Height","BW","FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0","TIMP0","MMP0","P3NP0")
-file_name <- "Vitamin D"
+file_name <- "Vitamin D-10"
 get_hist(X1, A, Y_all, file_name)
 get_box(X1, A, Y_all, file_name)
 
@@ -104,6 +104,6 @@ X <- vk[, c("Gender","HTNYes","DMYes" , "HCVYes","SmokingYes", "HeartfailureYes"
 X1 <- model.matrix(~ . - 1, X)
 # 定义响应变量
 Y_all <- vk$MGPPre
-file_name <- "Vitamin K"
+file_name <- "Vitamin K-10"
 get_hist(X1, A, Y_all, file_name)
 get_box(X1, A, Y_all, file_name)

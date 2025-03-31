@@ -3,7 +3,9 @@ nested_conformalSA <- function(X, Y1, Y0, T, gmm,
                              quantiles=quantiles,
                              outfun=outfun, outparams=list(),
                              psfun=Boosting, psparams=list(),
-                             group1_prop=0.5){
+                             group1_prop=0.5,
+                             data.seed = data.seed, model.seed = model.seed
+                             ){
 
   # # setting the unobserved value to na，在外部已经做过了
   # Y1[which(T==0)] <- NA
@@ -21,8 +23,11 @@ nested_conformalSA <- function(X, Y1, Y0, T, gmm,
   ##  USE GROUP 1 to fit the outcome predictors and get Yscores.  ##
   ##################################################################
 
-  obj_treated <- conformal_SA(X[group1id, , drop=FALSE], Y1[group1id], gmm, type = type,  quantiles=quantiles, outfun=outfun, outparams=outparams, nested=TRUE)
-  obj_control <- conformal_SA(X[group1id, , drop=FALSE], Y0[group1id], gmm, type = type, quantiles=quantiles, outfun=outfun, outparams=outparams, nested=TRUE)
+  obj_treated <- conformal_SA(X[group1id, , drop=FALSE], Y1[group1id], gmm, type = type,  quantiles=quantiles, outfun=outfun, outparams=outparams, nested=TRUE,
+  data.seed = data.seed, model.seed = model.seed)
+  
+  obj_control <- conformal_SA(X[group1id, , drop=FALSE], Y0[group1id], gmm, type = type, quantiles=quantiles, outfun=outfun, outparams=outparams, nested=TRUE,
+  data.seed = data.seed, model.seed = model.seed)
 
   ########################################################################
   ##  fitting propensity score using all the training data from group1  ##
@@ -37,6 +42,7 @@ nested_conformalSA <- function(X, Y1, Y0, T, gmm,
   psparams <- c(list(Y = T_train, X = X_train),psparams0)
 
   PSmodel <- function(X){
+    set.seed(model.seed)
     do.call(psfun, c(psparams, list(Xtest = X)))
   }
 
