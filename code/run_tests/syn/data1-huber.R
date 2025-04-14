@@ -20,11 +20,12 @@ parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
 parser$add_argument("--cftype", type="integer", default=2, help="confounding type")
 parser$add_argument("--fct", type="double", default=1, help="shrinkage, <=1")
 parser$add_argument("--save", type="logical", default=TRUE, help="save")
-parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
+parser$add_argument("--seed1", type = "double", default = 123, help = "data random seed")
+parser$add_argument("--seed2", type = "double", default = 456, help = "model random seed")
 parser$add_argument("--ntrial", type = "integer", default = 5, help = "number of trials,50")
-parser$add_argument("--path", type = "character", default = './results/synthetic/VD_huber_para/', help = "save location")
-parser$add_argument("--ntrain", type = "integer", default = 500, help = "training numbers,3000")
-parser$add_argument("--ntest", type = "integer", default = 500, help = "testing numbers,10000")
+parser$add_argument("--path", type = "character", default = './results/synthetic/data1_huber_para/', help = "save location")
+parser$add_argument("--ntrain", type = "integer", default = 5, help = "training numbers,3000")
+parser$add_argument("--ntest", type = "integer", default = 5, help = "testing numbers,10000")
 parser$add_argument("--errdist", type = "character", default = 'norm', help = "error distribution,norm,heavy,norm_p")
 parser$add_argument("--huber_alpha", type = "integer", default = 0.9, help = "huber alpha, [0,1]")
 args <- parser$parse_args()
@@ -33,7 +34,8 @@ gmm_star <- args$gmm_star
 cftype<- args$cftype
 fct <- args$fct
 ntrial<- args$ntrial
-seed <- args$seed
+seed1 <- args$seed1
+seed2 <- args$seed2
 save <- args$save
 errdist <- args$errdist
 n1 <- args$ntrain   # 训练集个数

@@ -1,63 +1,67 @@
-library("readxl")
-# 导入自定义函数
-source("plot_figures/or_plot/get_hist.R")
-source("plot_figures/or_plot/get_box.R")
-######drug_AS######
-# 导入数据
-# 读取data.xlsx文件的第一个工作表
-islander<-read.csv('/Users/niubei/Desktop/保形预测/datasets/drugged_AS.csv')
-islander$Happy_Sad_group <- ifelse(islander$Happy_Sad_group == "H", 1, 0)
-library(dplyr)
-data_1 <- filter(islander, T == 1 | T == 0)
-data_2 <- filter(islander, T == 2 | T == 0)
-data_3 <- filter(islander, T == 3 | T == 0)
-# 定义一个向量，包含三个数据集的名称
-datasets <- c("data_1", "data_2", "data_3")
-# 对每个数据集进行循环
-for (i in 1:length(datasets)){
-  # 使用get函数，根据名称获取数据集
-  data <- get(datasets[i])
-  # 筛选处理组和控制组
-  A <- as.numeric(data$T == i)
-  # 定义协变量矩阵
-  X <- data[, c("age", "Mem_Score_Before", "Happy_Sad_group")]
-  X1 <- model.matrix(~ . - 1, X)
-  # 定义响应变量
-  Y_all <- data$Diff
-  # 将drug_AS和i拼接成字符串，作为文件名
-  file_name <- paste("drug_AS-10", i, sep = "_")
-  get_hist(X1, A, Y_all, file_name)
-  get_box(X1, A, Y_all, file_name)
-
+# import
+options (warn = -1)
+library("devtools")
+if(exists("cfcausal:::summary_CI")){
+  rm(list = c("summary_CI"))
 }
-######drug_TS######
-# 导入数据
-# 读取data.xlsx文件的第一个工作表
-islander<-read.csv('/Users/niubei/Desktop/保形预测/datasets/drugged_TS.csv')
-islander$Happy_Sad_group <- ifelse(islander$Happy_Sad_group == "H", 1, 0)
-library(dplyr)
-data_1 <- filter(islander, T == 1 | T == 0)
-data_2 <- filter(islander, T == 2 | T == 0)
-data_3 <- filter(islander, T == 3 | T == 0)
-# 定义一个向量，包含三个数据集的名称
-datasets <- c("data_1", "data_2", "data_3")
-# 对每个数据集进行循环
-for (i in 1:length(datasets)){
-  # 使用get函数，根据名称获取数据集
-  data <- get(datasets[i])
-  # 筛选处理组和控制组
-  A <- as.numeric(data$T == i)
-  # 定义协变量矩阵
-  X <- data[, c("age", "Mem_Score_Before", "Happy_Sad_group")]
-  X1 <- model.matrix(~ . - 1, X)
-  # 定义响应变量
-  Y_all <- data$Diff
-  # 调用自定义函数
-  # 将drug_TS和i拼接成字符串，作为文件名
-  file_name <- paste("drug_TS-10", i, sep = "_")
-  get_hist(X1, A, Y_all, file_name)
-  get_box(X1, A, Y_all, file_name)
-}
+devtools::load_all(".")
+source("plot_figures/or_plot/get_ORplots.R")
+# ######drug_AS######
+# # 导入数据
+# # 读取data.xlsx文件的第一个工作表
+# islander<-read.csv('/Users/niubei/Desktop/保形预测/datasets/drugged_AS.csv')
+# islander$Happy_Sad_group <- ifelse(islander$Happy_Sad_group == "H", 1, 0)
+# library(dplyr)
+# data_1 <- filter(islander, T == 1 | T == 0)
+# data_2 <- filter(islander, T == 2 | T == 0)
+# data_3 <- filter(islander, T == 3 | T == 0)
+# # 定义一个向量，包含三个数据集的名称
+# datasets <- c("data_1", "data_2", "data_3")
+# # 对每个数据集进行循环
+# for (i in 1:length(datasets)){
+#   # 使用get函数，根据名称获取数据集
+#   data <- get(datasets[i])
+#   # 筛选处理组和控制组
+#   A <- as.numeric(data$T == i)
+#   # 定义协变量矩阵
+#   X <- data[, c("age", "Mem_Score_Before", "Happy_Sad_group")]
+#   X1 <- model.matrix(~ . - 1, X)
+#   # 定义响应变量
+#   Y_all <- data$Diff
+#   # 将drug_AS和i拼接成字符串，作为文件名
+#   file_name <- paste("drug_AS-10", i, sep = "_")
+#   get_hist(X1, A, Y_all, file_name)
+#   get_box(X1, A, Y_all, file_name)
+#
+# }
+# ######drug_TS######
+# # 导入数据
+# # 读取data.xlsx文件的第一个工作表
+# islander<-read.csv('/Users/niubei/Desktop/保形预测/datasets/drugged_TS.csv')
+# islander$Happy_Sad_group <- ifelse(islander$Happy_Sad_group == "H", 1, 0)
+# library(dplyr)
+# data_1 <- filter(islander, T == 1 | T == 0)
+# data_2 <- filter(islander, T == 2 | T == 0)
+# data_3 <- filter(islander, T == 3 | T == 0)
+# # 定义一个向量，包含三个数据集的名称
+# datasets <- c("data_1", "data_2", "data_3")
+# # 对每个数据集进行循环
+# for (i in 1:length(datasets)){
+#   # 使用get函数，根据名称获取数据集
+#   data <- get(datasets[i])
+#   # 筛选处理组和控制组
+#   A <- as.numeric(data$T == i)
+#   # 定义协变量矩阵
+#   X <- data[, c("age", "Mem_Score_Before", "Happy_Sad_group")]
+#   X1 <- model.matrix(~ . - 1, X)
+#   # 定义响应变量
+#   Y_all <- data$Diff
+#   # 调用自定义函数
+#   # 将drug_TS和i拼接成字符串，作为文件名
+#   file_name <- paste("drug_TS-10", i, sep = "_")
+#   get_hist(X1, A, Y_all, file_name)
+#   get_box(X1, A, Y_all, file_name)
+# }
 ######vd######
 # 读取data.xlsx文件的第一个工作表
 vd <- read.csv("data/VD.csv")
@@ -71,12 +75,16 @@ X <- vd[, c("Sex", "Age",
 X[X$Sex == 2,]$Sex <- 0
 X1 <- model.matrix(~ . - 1, X)
 # 定义响应变量
-Y_all <- vd$TGF6
+Y_all <- log(vd$TGF6)
 # # 调用boosting算法进行预测
 colnames(X1) <- c("Sex","Age31.40","Age41.50","Age51.60","Age61.70","Age71.80","Height","BW","FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0","TIMP0","MMP0","P3NP0")
-file_name <- "Vitamin D-10"
-get_hist(X1, A, Y_all, file_name)
-get_box(X1, A, Y_all, file_name)
+
+title <- "Vitamin D"
+#path <- paste0("figures/OR/",title)
+OR_VD <- get_plots(X1, A, Y_all, title)
+
+text_data <- c(summary(OR_VD),OR_VD)
+write(text_data, file="figures/OR/VD.txt")
 
 ######vk######
 # 导入数据
@@ -103,7 +111,12 @@ A <- as.numeric(vk$T == 1)
 X <- vk[, c("Gender","HTNYes","DMYes" , "HCVYes","SmokingYes", "HeartfailureYes" ,"ISHDYes","Access","Age","Durationofdialysis", "PTH", "Ca.Pre","PHPre", "CaxPProductPre")]
 X1 <- model.matrix(~ . - 1, X)
 # 定义响应变量
-Y_all <- vk$MGPPre
-file_name <- "Vitamin K-10"
-get_hist(X1, A, Y_all, file_name)
-get_box(X1, A, Y_all, file_name)
+Y_all <- log(vk$MGPPre)
+
+title <- "Vitamin K"
+#path <- paste0("figures/OR/",title)
+OR_VK <- get_plots(X1, A, Y_all, title)
+
+text_data <- c(summary(OR_VK),OR_VK)
+write(text_data, file="figures/OR/VK.txt")
+

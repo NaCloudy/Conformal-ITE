@@ -16,12 +16,12 @@ options(scipen=999)
 #### Get parameters
 suppressPackageStartupMessages(library("argparse"))
 parser <- ArgumentParser()
-parser$add_argument("--gmm_star", type = "double", default = 1, help = "SA parameter, >=1")
+parser$add_argument("--gmm_star", type = "double", default = 3, help = "SA parameter, >=1")
 parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
 parser$add_argument("--save", type="logical", default=TRUE, help="save")
 parser$add_argument("--seed1", type = "double", default = 123, help = "data random seed")
-parser$add_argument("--seed2", type = "double", default = 456, help = "model random seed")
-parser$add_argument("--ntrial", type = "integer", default = 3, help = "number of trials")
+parser$add_argument("--seed2", type = "double", default = 45, help = "model random seed")
+parser$add_argument("--ntrial", type = "integer", default = 500, help = "number of trials")
 parser$add_argument("--method", type = "character", default = 'mean', help = "mean or cqr")
 parser$add_argument("--save_par1", type = "character", default = './results/ITE/', help = "save ITE parent location")
 parser$add_argument("--save_par2", type = "character", default = './results/class/', help = "save classification parent location")
@@ -60,9 +60,9 @@ Y_all <- this_data$SOD32 #GPx12#IL82#SOD32#TNf2
 record <- replicate(2,matrix(0,nrow=ntrial,ncol=3), simplify=FALSE)
 # 创建文件路径
 folder1 <- paste0(save_path1,'alpha_',alpha,'_gmm_',gmm_star, '/')
-folder2 <- paste0(save_path2,'alpha_',alpha,'_gmm_',gmm_star, '_ntrial_', ntrial, '/')
+#folder2 <- paste0(save_path2,'alpha_',alpha,'_gmm_',gmm_star, '_ntrial_', ntrial, '/')
 dir.create(folder1, recursive=TRUE, showWarnings = FALSE)
-dir.create(folder2, recursive=TRUE, showWarnings = FALSE)
+#dir.create(folder2, recursive=TRUE, showWarnings = FALSE)
 ##########训练测试##########
 
 ##对同一批人

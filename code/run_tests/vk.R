@@ -1,4 +1,3 @@
-#+eval=FALSE
 #########设置###########
 options (warn = -1)
 library("devtools")
@@ -12,93 +11,127 @@ library("ggplot2")
 library("bannerCommenter")
 library("readxl")
 options(scipen=999)
+
+
 #### Get parameters
 suppressPackageStartupMessages(library("argparse"))
 parser <- ArgumentParser()
 parser$add_argument("--gmm_star", type = "double", default = 1, help = "SA parameter, >=1")
 parser$add_argument("--alpha", type="double", default=0.2, help="miscoverage")
 parser$add_argument("--save", type="logical", default=TRUE, help="save")
-parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
-parser$add_argument("--ntrial", type = "integer", default = 5, help = "number of trials")
-parser$add_argument("--path", type = "character", default = './results/ITE/VK-log2-new/', help = "save location")
+parser$add_argument("--seed1", type = "double", default = 123, help = "data random seed")
+parser$add_argument("--seed2", type = "double", default = 456, help = "model random seed")
+parser$add_argument("--ntrial", type = "integer", default = 100, help = "number of trials")
+parser$add_argument("--method", type = "character", default = 'mean', help = "mean or cqr")
+parser$add_argument("--save_par1", type = "character", default = './results/ITE/', help = "save ITE parent location")
+parser$add_argument("--save_par2", type = "character", default = './results/class/', help = "save classification parent location")
+parser$add_argument("--data_name", type = "character", default = 'VK2', help = "data name")
 args <- parser$parse_args()
+method <- args$method
 alpha <- args$alpha
 gmm_star <- args$gmm_star
 ntrial<- args$ntrial
-seed <- args$seed
-save <- args$save
-path = args$path
+data.seed <- args$seed1
+model.seed <- args$seed2
+data_name <- args$data_name
+save_par1 <- args$save_par1
+save_path1 <- paste0(save_par1,data_name,"-",method,"/")
+save_par2 <- args$save_par2
+save_path2 <- paste0(save_par2,data_name,"-",method,"/")
 q<- c(alpha/2, 1- (alpha/2))
 
 
 # 导入数据
 # 读取vk.csv
-vk <- read.csv("data/VK2.csv")
-vk$Gender <- ifelse(vk$Gender  == "Male", 1, 0)
-vk$Access <- ifelse(vk$Access  == "AVFistula", 1, 0)
-# 使用ifelse函数，把"Yes"替换为1，把"No"替换为0
-# 将需要变成0-1变量的列进行转换
-# 生成模型矩阵并赋值给mm
-mm <- model.matrix(~ HTN + DM + HCV + Smoking + Heartfailure + ISHD, data = vk)
-# 把mm数据框中的虚拟编码替换到vk数据框中
-# 创建一个向量col_names，存储mm数据框中除了截距项之外的列名
-col_names <- colnames(mm)[-1]
-
-# 使用for循环遍历col_names向量中的每个元素
-for (col in col_names) {
-  # 使用赋值符号<-把mm数据框中对应列的值覆盖到vk数据框中对应列上
-  vk[, col] <- mm[, col]
-}
+vk <- read.csv(paste0("data/",data_name,".csv"))
 # 筛选处理组和控制组
 A <- as.numeric(vk$T == 1)
 # 定义协变量矩阵
-X <- vk[, c("Gender","HTNYes","DMYes" , "HCVYes","SmokingYes", "HeartfailureYes" ,"ISHDYes","Access","Age","Durationofdialysis", "PTH", "Ca.Pre","PHPre", "CaxPProductPre","MGPPre")]
+X <- vk[, c("Gender", "HTN", "DM", "HCV",
+            "Smoking","Heartfailure","ISHD","Access","Age","Durationofdialysis","PTH",
+            "Ca.Pre","PHPre", "CaxPProductPre","MGPPre")]
+X$Gender <- ifelse(X$Gender  == "Male", 1, 0)
+X$Access <- ifelse(X$Access  == "AVFistula", 1, 0)
+X$Gender <- as.factor(X$Gender)
+X$HTN <- as.factor(X$HTN)
+X$DM <- as.factor(X$DM)
+X$HCV <- as.factor(X$HCV)
+X$Smoking <- as.factor(X$Smoking)
+X$Heartfailure <- as.factor(X$Heartfailure)
+X$ISHD <- as.factor(X$ISHD)
+#X <- vk[, c("Gender","HTNYes","DMYes" , "HCVYes","SmokingYes", "HeartfailureYes" ,"ISHDYes","Access","Age","Durationofdialysis", "PTH", "Ca.Pre","PHPre", "CaxPProductPre","MGPPre")]
 X1 <- model.matrix(~ . - 1, X)
 # 定义响应变量
 Y_all <- log2(vk$MGPPost)
 record <- replicate(2,matrix(0,nrow=ntrial,ncol=3), simplify=FALSE)
 # 创建文件路径，根据数据集的名称修改文件名
-folder<- paste0(path,'alpha_',alpha,'_gmm_',gmm_star, '/')
-dir.create(folder, recursive=TRUE, showWarnings = FALSE)
+folder1 <- paste0(save_path1,'alpha_',alpha,'_gmm_',gmm_star, '/')
+#folder2 <- paste0(save_path2,'alpha_',alpha,'_gmm_',gmm_star, '_ntrial_', ntrial, '/')
+dir.create(folder1, recursive=TRUE, showWarnings = FALSE)
+#dir.create(folder2, recursive=TRUE, showWarnings = FALSE)
 
 ##########训练测试##########
+##对同一批人
+n <- length(Y_all)
+trainprop <- 0.8
+set.seed(data.seed)
+trainid <- sample(n, floor(n * trainprop))
+#set.seed(NULL)
+print(paste0("alpha is ",alpha))
+# 训练集数据的划分
+Y_obs <- Y_all[trainid]
+X <- X1[trainid,]
+T_obs <- A[trainid]
+Y1 <- Y_obs
+Y1[which(T_obs==0)] <- NA
+Y0 <- Y_obs
+Y0[which(T_obs==1)] <- NA
+id <- seq(1, n)
+testid<- id[!(id %in% trainid)]
+Xtest <- X1[testid,]
+train_dat <- NA
+
 for (iter in 1:ntrial){
-    n<- length(Y_all)
-    trainprop <- 0.8
-    set.seed(123)
-    trainid <- sample(n, floor(n * trainprop))
-    set.seed(NULL)
-    print(paste0("alpha is ",alpha))
-    # 训练集数据的划分
-    Y_obs <- Y_all[trainid]
-    X <- X1[trainid,]
-    T_obs <- A[trainid]
-    Y1 <- Y_obs
-    Y1[which(T_obs==0)] <- NA
-    Y0 <- Y_obs
-    Y0[which(T_obs==1)] <- NA
-    id <- seq(1, n)
-    testid<- id[!(id %in% trainid)]
-    Xtest <- X1[testid,]
+  # 生成预测区间
+  colnames(X) <- c("Gender0","Gender1","HTNYes","DMYes" , "HCVYes","SmokingYes", "HeartfailureYes" ,"ISHDYes","Access","Age","Durationofdialysis", "PTH", "Ca.Pre","PHPre", "CaxPProductPre","MGPPre")
+  colnames(Xtest) <- c("Gender0","Gender1","HTNYes","DMYes" , "HCVYes","SmokingYes", "HeartfailureYes" ,"ISHDYes","Access","Age","Durationofdialysis", "PTH", "Ca.Pre","PHPre", "CaxPProductPre","MGPPre")
 
-    # 生成预测区间
-    obj_mean <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "mean",quantiles=list(), outfun='RF',psparams = list(bag.fraction = 0.8,n.minobsinnode = 5) )
-    # obj_cqr <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "CQR",quantiles=q, outfun='quantRF',psparams = list(bag.fraction = 0.8,n.minobsinnode = 5))
-    obj_bands_mean <- predict.nested(obj_mean, X, Y_obs, T_obs, alpha = alpha)
-    # obj_bands_cqr <- predict.nested(obj_cqr, X, Y_obs, T_obs, alpha = alpha)
-    ci_mean <- fit_and_predict_band(obj_bands_mean, Xtest,'RF')
-    # ci_cqr <- fit_and_predict_band(obj_bands_cqr, Xtest,'RF')
+  if(method == "mean"){
+    obj_mean <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "mean",quantiles=list(), outfun='RF',psparams = list(bag.fraction = 0.8,n.minobsinnode = 5),data.seed = data.seed, model.seed = model.seed)
+    obj_bands_mean <- predict.nested(obj_mean, X, Y_obs, T_obs, alpha = alpha, data.seed = data.seed, model.seed = model.seed)
+    ci_mean <- fit_and_predict_band(obj_bands_mean, Xtest, testid, 'RF',data.seed = data.seed, model.seed = model.seed)
     ci_list <- list(ci_mean)
-    print_list <- list("ci_mean")
+
+    class_dat <- cbind(Xtest, effective=ci_mean$effective)
+    rownames(class_dat) <- NULL
+    train_dat <- rbind(train_dat, class_dat)
+
     data <- cbind(ci_mean)
-    colnames(data) <- c("mean_low", "mean_high", "mean_y1_mean","mean_y0_mean")
-    df <- as.data.frame(t(data))
-    # 根据数据集的名称修改文件名
-    write.csv(data, file=paste0(folder, 'ntrial_', iter, '.csv'))
+    colnames(data) <- c("mean_low", "mean_high", "mean_y1_mean","mean_y0_mean", "id", "effectiveness")
+  }else if (method == "cqr"){
+    obj_cqr <- nested_conformalSA(X, Y1, Y0, T_obs, gmm_star, type = "CQR",quantiles=q, outfun='quantRF',psparams = list(bag.fraction = 0.8,n.minobsinnode = 5),data.seed = data.seed, model.seed = model.seed)
+    obj_bands_cqr <- predict.nested(obj_cqr, X, Y_obs, T_obs, alpha = alpha,data.seed = data.seed, model.seed = model.seed)
+    ci_cqr <- fit_and_predict_band(obj_bands_cqr, Xtest, testid, 'RF',data.seed = data.seed, model.seed = model.seed)
+    ci_list <- list(ci_cqr)
+
+    class_dat <- cbind(Xtest, effective=ci_cqr$effective)
+    rownames(class_dat) <- NULL
+    train_dat <- rbind(train_dat, class_dat)
+
+    data <- cbind(ci_cqr)
+    colnames(data) <- c("cqr_low", "cqr_high", "cqr_y1_mean","cqr_y0_mean", "id", "effectiveness")
   }
+  df <- as.data.frame(t(data))
+  write.csv(data, file=paste0(folder1, 'ntrial_', iter, '.csv'))
+}
 
-
-
-
-
-
+####test####
+# train_dat <- train_dat[c(-1),]
+# class_model <- randomForest::randomForest(x=train_dat[,c(1:14)], y= train_dat[,c(14)])
+# imp <- randomForest::importance(class_model)
+# imp <- cbind(imp, imp[,1]/sum(imp[,1])*100)
+# imp <- as.data.frame(imp[order(-imp[, 1]), ])
+# colnames(imp) <- c("IncNodePurity", "Percentage")
+# plot <- randomForest::varImpPlot(class_model)
+#
+# write.csv(as.data.frame(imp), file=paste0(folder2, 'rf.csv'))

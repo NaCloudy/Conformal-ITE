@@ -362,6 +362,128 @@ par(mfrow=c(1,1))
 dev.off()
 ```
 
+
+##### data1
+
+```{r d1}
+# data_name <- "data1"
+# getwd()
+# this_data <- read_xlsx(paste0("../data/",data_name,".xlsx"))
+# # 筛选处理组和控制组
+# A <- as.numeric(this_data$group == "1")
+# # 定义协变量矩阵
+# X <- this_data[, c("Sex", "AgeGroup","Education", "Smoker", "Income", "Living",
+#     "TNf0", "GPx10", "IL80", "SOD30")]
+# X[X$Sex == 2,]$Sex <- 0
+# X$AgeGroup = as.factor(X$AgeGroup)
+# X$Education = as.factor(X$Education)
+# X$Smoker = as.factor(X$Smoker)
+# X$Income = as.factor(X$Income)
+# X$Living = as.factor(X$Living)
+# X1 <- model.matrix(~ . - 1, X)
+# # 定义响应变量
+# Y_all <- this_data$SOD32 #GPx12#IL82#SOD32#TNf2
+# 
+# 
+# dataset <- "data1"
+# n<- length(Y_all)
+# trainprop <- 0.8
+# set.seed(123)
+# trainid <- sample(n, floor(n * trainprop))
+# set.seed(NULL)
+# 
+# # 训练集数据的划分
+# Y_obs <- Y_all[trainid]
+# X <- X1[trainid,]
+# T_obs <- A[trainid]
+# 
+# Y1 <- Y_obs
+# Y1[which(T_obs==0)] <- NA
+# 
+# Y0 <- Y_obs
+# Y0[which(T_obs==1)] <- NA
+# 
+# id <- seq(1, n)
+# testid<- id[!(id %in% trainid)]
+# Xtest <- X1[testid,]
+# 
+# # 训练模型并获取残差
+# Xtrain.1 <- X[T_obs==1,]
+# Ytrain.1 <- Y1[T_obs==1]
+# Ymodel.1 <- function(X){
+#   outparams <- c(list(Y = Ytrain.1, X = Xtrain.1, quantiles = list()), outparams = list())
+#   do.call("RF", c(outparams, list(Xtest = X)))
+# }
+# residual.1 <- Ytrain.1 - Ymodel.1(Xtrain.1)
+# 
+# Xtrain.0 <- X[T_obs==0,]
+# Ytrain.0 <- Y0[T_obs==0]
+# Ymodel.0 <- function(X){
+#   outparams <- c(list(Y = Ytrain.0, X = Xtrain.0, quantiles = list()), outparams = list())
+#   do.call("RF", c(outparams, list(Xtest = X)))
+#   }
+# residual.0 <- Ytrain.0 - Ymodel.0(Xtrain.0)
+```
+
+```{r store}
+# # 存储两个向量为CSV文件
+# folder_0 <- paste0(path, dataset,"_residual_0.csv")
+# write.csv(residual.0, folder_0, row.names = FALSE)
+# folder_1 <- paste0(path, dataset,"_residual_1.csv")
+# write.csv(residual.1, folder_1, row.names = FALSE)
+```
+
+```{r read d1}
+# 从数据框中提取两个向量
+dataset <- "data1"
+folder_0 <- paste0(path, dataset,"_residual_0.csv")
+data1.0 <- read.csv(folder_0)$x
+folder_1 <- paste0(path, dataset,"_residual_1.csv")
+data1.1 <- read.csv(folder_1)$x
+```
+
+```{r }
+print("T = 1")
+outlier_detect(data1.1)
+print("T = 0")
+outlier_detect(data1.0)
+print("All")
+outlier_detect(c(data1.0, data1.1))
+
+# 绘制残差箱线图并保存
+folder<- paste0(path, dataset,"_box.png")
+png(folder,
+    width = 7, 
+    height = 5,
+    units = "in",
+    bg = "white",
+    res = 300)
+par(mfrow=c(1,3))
+boxplot(data1.1, col = 'yellow', main = "residual of t = 1")
+boxplot(data1.0, col = 'pink', main = "residual of t = 0")
+boxplot(c(data1.0,data1.1), col = 'grey', main = "residual")
+par(mfrow=c(1,1))
+dev.off()
+```
+
+```{r density}
+# 绘制残差核密度图并保存
+folder<- paste0(path, dataset,"_density.png")
+png(folder,
+    width = 7, 
+    height = 5,
+    units = "in",
+    bg = "white",
+    res = 300)
+par(mfrow=c(1,2))
+plot(density(data1.0))
+plot(density(data1.1))
+par(mfrow=c(1,1))
+dev.off()
+```
+
+
+
 ##### residual
 
 ```{r study of residual}

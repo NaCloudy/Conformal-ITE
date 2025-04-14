@@ -1,14 +1,19 @@
-library("readxl")
-# 导入自定义函数
-source("plot_figures/or_plot/get_plots.R")
-source("plot_figures/or_plot/get_hist.R")
-######drug_AS######
+# import
+options (warn = -1)
+library("devtools")
+if(exists("cfcausal:::summary_CI")){
+  rm(list = c("summary_CI"))
+}
+devtools::load_all(".")
+source("plot_figures/or_plot/get_ORplots.R")
+library(readxl)
+
 # 导入数据
 ######1######
 # 读取data.xlsx文件的第一个工作表
 data1 <- read_xlsx("data/data1.xlsx")
 # 数据预处理
-A <- as.numeric(data1$group == "1")
+A_all <- as.numeric(data1$group == "1")
 # 定义协变量矩阵
 X <- data1[, c("Sex", "AgeGroup","Education", "Smoker", "Income", "Living","TNf0", "GPx10", "IL80", "SOD30")]
 X[X$Sex == 2,]$Sex <- 0
@@ -23,9 +28,12 @@ X1 <- model.matrix(~ . - 1, X)
 Y_all <- data1$SOD32#TNf2
 # # 调用boosting算法进行预测
 #colnames(X1) <- c("Sex", "AgeGroup","Education", "Smoker", "Income", "Living","TNf0", "GPx10", "IL80", "SOD30")
-file_name <- "Data1-0322"
-R <- get_plots(X1, A, Y_all, file_name)
-R <- get_hist(X1, A, Y_all, file_name)
+main <- "Data1"
+#path <- paste0("figures/OR/",title)
+OR_1 <- get_plots(X1, A_all, Y_all, main)
+
+text_data <- c(summary(OR_1),OR_1)
+write(text_data, file="figures/OR/data1.txt")
 
 ######30######
 # 导入数据
@@ -41,9 +49,12 @@ X1 <- model.matrix(~ . - 1, X)
 # 定义响应变量
 Y_all <- data30$UricAcid
 # 调用boosting算法进行预测
-file_name <- "Data30"
-R <- get_plots(X1, A, Y_all, file_name)
-R <- get_hist(X1, A, Y_all, file_name)
+title <- "Data30"
+#path <- paste0("figures/OR/",title)
+OR_30 <- get_plots(X1, A, Y_all, title)
+
+text_data <- c(summary(OR_30),OR_30)
+write(text_data, file="figures/OR/data30.txt")
 
 
 

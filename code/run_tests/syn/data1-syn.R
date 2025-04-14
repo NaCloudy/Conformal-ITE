@@ -1,3 +1,31 @@
+#+eval=FALSE
+Xfun <- function(n1, X, R, m) {
+  mydata <- mvrnorm(n1, m, R)  # 多元正态分布生成模拟连续数据
+  X1 <- matrix(NA, nrow = n1, ncol = ncol(X))  # 初始化结果矩阵
+
+  for (i in 1:ncol(X)) {
+    n <- sum(X[, i])  # 第 i 列中变量为 1 的个数
+    p <- n / nrow(X)  # 计算比例
+    xi <- rmultinom(n = n1, size = 1, prob = c(1 - p, p))  # 生成随机二元变量
+
+    # one-hot编码
+    vi <- matrix(NA, nrow = n1, ncol = 2)
+    vi[which(xi[1, ] == 1), 1] <- 0
+    vi[which(xi[2, ] == 1), 2] <- 1
+
+    # 将结果存储到 X1 中
+    X1 <- cbind(X1, vi)
+  }
+
+  # 将连续数据合并到结果矩阵中
+  df <- as.data.frame(cbind(mydata, X1))
+
+  # 对离散数据进行one-hot处理
+  X1 <- model.matrix(~ . - 1, df)
+
+  return(X1)
+}
+
 #########设置###########
 library("devtools")
 if(exists("cfcausal:::summary_CI")){
@@ -21,12 +49,12 @@ parser$add_argument("--cftype", type="integer", default=2, help="confounding typ
 parser$add_argument("--fct", type="double", default=1, help="shrinkage, <=1")
 parser$add_argument("--save", type="logical", default=TRUE, help="save")
 parser$add_argument("--seed", type = "double", default = 1, help = "random seed")
-parser$add_argument("--ntrial", type = "integer", default = 5, help = "number of trials,50")
-parser$add_argument("--path", type = "character", default = './results/synthetic/VD_huber/', help = "save location")
+parser$add_argument("--ntrial", type = "integer", default = 30, help = "number of trials,50")
+parser$add_argument("--path", type = "character", default = './results/synthetic/data1_huber/', help = "save location")
 parser$add_argument("--ntrain", type = "integer", default = 2000, help = "training numbers,3000")
 parser$add_argument("--ntest", type = "integer", default = 5000, help = "testing numbers,10000")
 # parser$add_argument("--errdist", type = "character", default = 'heavy', help = "error distribution,norm,heavy,norm_p")
-parser$add_argument("--huber_alpha", type = "integer", default = 0.7, help = "huber alpha, [0,1]")
+parser$add_argument("--huber_alpha", type = "integer", default = 0.1, help = "huber alpha, [0,1]")
 args <- parser$parse_args()
 alpha <- args$alpha
 # gmm_star <- args$gmm_star
@@ -43,54 +71,94 @@ huber_alpha <- args$huber_alpha
 q<- c(alpha/2, 1- (alpha/2))
 
 # 导入数据
-# 读取VD数据集
-vd <- read.csv("data/VD.csv")
+# 读取vk.csv
+vk <- read.csv("data/VK2.csv")
+vk$Gender <- ifelse(vk$Gender  == "Male", 1, 0)
+vk$Access <- ifelse(vk$Access  == "AVFistula", 1, 0)
+# 生成模型矩阵并赋值给mm
+mm <- model.matrix(~ HTN + DM + HCV + Smoking + Heartfailure + ISHD, data = vk)
+# 把mm数据框中的虚拟编码替换到vk数据框中
+col_names <- colnames(mm)[-1]
+for (col in col_names) {
+  vk[, col] <- mm[, col]
+}
 # 筛选处理组和控制组
-A <- as.numeric(vd$Group == "A")
+A <- as.numeric(vk$T == 1)
 # 定义协变量矩阵
-Xdata <- vd[, c("Sex", "Age", "Height", "BW","FIB4","APRI","VD0","AST0","ALT0","Plt0","TGF0","TIMP0","MMP0","P3NP0")]
+X <- vk[, c("Gender","HTNYes","DMYes" , "HCVYes","SmokingYes", "HeartfailureYes" ,"ISHDYes","Access","Age","Durationofdialysis", "PTH", "Ca.Pre","PHPre", "CaxPProductPre")]
+X1 <- model.matrix(~ . - 1, X)
 
-# 后面是离散数据
-R <- cov(Xdata[,-c(1:2)]) # 连续变量的样本协方差
-m <- colMeans(Xdata[,-c(1:2)]) # 连续变量样本均值
+R <- cov(X1[,-(1:8)]) # 连续变量的样本协方差
+m <- colMeans(X1[,-(1:8)]) # 连续变量样本均值
 
 Xfun<-function(n1,X,R,m){#需要读入原始数据矩阵X和需要生成的样本个数n1
   mydata<-mvrnorm(n1,m,R)#多元正态分布生成模拟连续数据
-  #第一列 性别
-  n<-sum(X[,1]-1)#第一列中变量为2的个数
+  #第一列
+  n<-sum(X[,1])#第一列中变量为1的个数
   p<-n/dim(X)[1]
   x1<-rmultinom(n=n1, size=1, prob=c(1-p,p))
   v1<-rep(NA,n1)
-  v1[which(x1[1,]==1)]<-1
-  v1[which(x1[2,]==1)]<-2
-  #第二列 年龄
-  p4<-length(which(X[,2]=='61-70'))/dim(X)[1]
-  p3<-length(which(X[,2]=='51-60'))/dim(X)[1]
-  p2<-length(which(X[,2]=='41-50'))/dim(X)[1]
-  p1<-length(which(X[,2]=='31-40'))/dim(X)[1]
-  p5<-length(which(X[,2]=='71-80'))/dim(X)[1]
-  x2<-rmultinom(n=n1, size=1, prob=c(p1,p2,p3,p4,p5))
+  v1[which(x1[1,]==1)]<-0
+  v1[which(x1[2,]==1)]<-1
+  #第二列
+  n<-sum(X[,2])#第二列中变量为1的个数
+  p<-n/dim(X)[1]
+  x2<-rmultinom(n=n1, size=1, prob=c(1-p,p))
   v2<-rep(NA,n1)
-  v2[which(x2[1,]==1)]<-1
-  v2[which(x2[2,]==1)]<-2
-  v2[which(x2[3,]==1)]<-3
-  v2[which(x2[4,]==1)]<-4
-  v2[which(x2[5,]==1)]<-5#1\2\3\4\5分别代表31-40、41-50.。。几个年龄群体
+  v2[which(x2[1,]==1)]<-0
+  v2[which(x2[2,]==1)]<-1
+  #第三列
+  n<-sum(X[,3])#第三列中变量为1的个数
+  p<-n/dim(X)[1]
+  x3<-rmultinom(n=n1, size=1, prob=c(1-p,p))
+  v3<-rep(NA,n1)
+  v3[which(x3[1,]==1)]<-0
+  v3[which(x3[2,]==1)]<-1
+  #第四列
+  n<-sum(X[,4])#第四列中变量为1的个数
+  p<-n/dim(X)[1]
+  x4<-rmultinom(n=n1, size=1, prob=c(1-p,p))
+  v4<-rep(NA,n1)
+  v4[which(x4[1,]==1)]<-0
+  v4[which(x4[2,]==1)]<-1
+  #第五列
+  n<-sum(X[,5])#第五列中变量为1的个数
+  p<-n/dim(X)[1]
+  x5<-rmultinom(n=n1, size=1, prob=c(1-p,p))
+  v5<-rep(NA,n1)
+  v5[which(x5[1,]==1)]<-0
+  v5[which(x5[2,]==1)]<-1
+  #第六列
+  n<-sum(X[,6])#第六列中变量为1的个数
+  p<-n/dim(X)[1]
+  x6<-rmultinom(n=n1, size=1, prob=c(1-p,p))
+  v6<-rep(NA,n1)
+  v6[which(x6[1,]==1)]<-0
+  v6[which(x6[2,]==1)]<-1
+  #第七列
+  n<-sum(X[,7])#第七列中变量为1的个数
+  p<-n/dim(X)[1]
+  x7<-rmultinom(n=n1, size=1, prob=c(1-p,p))
+  v7<-rep(NA,n1)
+  v7[which(x7[1,]==1)]<-0
+  v7[which(x7[2,]==1)]<-1
+  #第8列
+  n<-sum(X[,8])#第八列中变量为1的个数
+  p<-n/dim(X)[1]
+  x8<-rmultinom(n=n1, size=1, prob=c(1-p,p))
+  v8<-rep(NA,n1)
+  v8[which(x8[1,]==1)]<-0
+  v8[which(x8[2,]==1)]<-1
   #离散和连续数据合并形成最终的模拟数据,离散数据做one hot 处理
   V<-as.matrix(mydata)
-  df<-cbind(V,v1,v2)
-  #df<-as.data.frame(df)
-  df[,14]<-factor(df[,14])
-  colnames(df)[13]<-'Sex'
-  colnames(df)[14]<-'Age'
+  df<-cbind(V,v1,v2,v3,v4,v5,v6,v7,v8)
   df<-as.data.frame(df)
-  df$Age<-as.factor(df$Age)
   X1<-model.matrix(~ .-1,df )
   return(X1)
 }
 
 sdfun <- function(X){
-    rep(1, nrow(X))
+  rep(1, nrow(X))
 }
 
 taufun <- function(X){
@@ -105,17 +173,16 @@ pscorefun <- function(X){
 
 get_Y1obs <- function(X){
   if(errdist=='norm'){
-    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1]))
+    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1],0,400))
   }else if(errdist=='heavy'){
-    return(taufun(X) + sdfun(X) * rlogis(dim(X)[1], -0.1075211, 1.2992436))
+    return(taufun(X) + sdfun(X) * rlogis(dim(X)[1], -99.03384, 326.54018))
   }else if(errdist=='norm_p'){
-    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1], 0, 2.5))
-  }else if(errdist=='t'){
-    return(taufun(X) + sdfun(X) * rt(dim(X)[1], 2))
+    y <- rnorm(dim(X)[1],0,400)
+    sam <- sample(1:dim(X)[1], 0.1*dim(X)[1])
+    y[sam] = y[sam] + 1500
+    return(taufun(X) + sdfun(X) * y)
   }
 }
-
-
 
 taufun0 <- function(X){
   taufun(X) + 10*sin(X[, 3])*(1/(1+exp(-0.05*X[, 3])))
@@ -123,17 +190,11 @@ taufun0 <- function(X){
 
 get_Y0obs <- function(X){
   if(errdist=='norm'){
-    return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1]))
+    return(taufun0(X) + sdfun(X) * rnorm(dim(X)[1],0,30))
   }else if(errdist=='heavy'){
-    return(taufun0(X) + sdfun(X) * rlogis(dim(X)[1], 0.07311189, 1.08353882))
-  }
-  else if(errdist=='norm_p'){
-    y <- rnorm(dim(X)[1],0,1)
-    sam <- sample(1:dim(X)[1], 0.07*dim(X)[1])
-    y[sam] = y[sam] + 6
-    return(taufun(X) + sdfun(X) * y)
-  }else if(errdist=='t'){
-    return(taufun(X) + sdfun(X) * rt(dim(X)[1], 2))
+    return(taufun0(X) + sdfun(X) * rlogis(dim(X)[1], -0.524069, 15.708925))
+  }else if(errdist=='norm_p'){
+    return(taufun(X) + sdfun(X) * rnorm(dim(X)[1],0,30))
   }
 }
 
@@ -146,12 +207,11 @@ shrink <- function(set,fc){
   return(newset)
 }
 
-
 print_list <- list("sa_huber", "sa_mean", "sa_cqr", "ite_nuc", "sa_naive")
 record <- replicate(length(print_list),matrix(0,nrow=ntrial,ncol=3), simplify=FALSE)
 
-gmm_values <- seq(1, 1, by = 1) # 创建一个从1到3的序列，步长为0.5
-errdist_values <- c("t") # errdist的值数组
+gmm_values <- seq(1, 3, by = 0.5) # 创建一个从1到3的序列，步长为0.5
+errdist_values <- c("norm", "heavy", "norm_p") # errdist的值数组
 
 for(errdist in errdist_values){
   for(gmm_star in gmm_values){
@@ -169,7 +229,7 @@ for(errdist in errdist_values){
       ##---------------------------------------------------------------
       ##                        Generate observed data                         -
       ##---------------------------------------------------------------
-      X<-Xfun(n1,Xdata,R,m)
+      X<-Xfun(n1,X1,R,m)
       n<-nrow(X)
       ps <- pscorefun(X)
       T <- as.numeric(runif(n)<ps)
@@ -221,7 +281,7 @@ for(errdist in errdist_values){
       ##----------------------------------------------------------------
 
       ##Testing
-      Xtest <- Xfun(ntest,Xdata,R,m)
+      Xtest <- Xfun(ntest,X1,R,m)
       pstest <- pscorefun(Xtest)
       Ttest <- as.numeric(runif(ntest)<pstest)
       id1 <- which(Ttest==1)
@@ -230,6 +290,7 @@ for(errdist in errdist_values){
       Y0test <- rep(NA,ntest)
       Y0test[id0] <- get_Y0obs(Xtest[id0,])
       Y0test[id1] <- samplecf(Xtest[id1,], taufun0, sdfun, case=cftype, gmm=gmm_star)
+
       #这里用的是case2，也就是appendix C里的方法产生反事实预测Y0
       Y1test <- rep(NA,ntest)
       Y1test[id1] <- get_Y1obs(Xtest[id1,])
@@ -332,7 +393,6 @@ for(errdist in errdist_values){
     }
   }
 }
-
 
 
 

@@ -11,3 +11,5 @@ export(conformalIte)
 importFrom(methods,formalArgs)
 importFrom(stats,predict)
 importFrom(stats,quantile)
+importFrom(base, read.csv)
+
