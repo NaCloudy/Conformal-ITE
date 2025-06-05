@@ -6,7 +6,7 @@ get_score_weight <- function(X1, Y1, gmm,
                              trainprop,
                              trainid1,
                              nested,
-                             data.seed = data.seed, model.seed = model.seed){
+                             data.seed=NULL, model.seed=NULL){
 
   #############
 

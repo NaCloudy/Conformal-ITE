@@ -4,7 +4,7 @@ nested_conformalSA <- function(X, Y1, Y0, T, gmm,
                              outfun=outfun, outparams=list(),
                              psfun=Boosting, psparams=list(),
                              group1_prop=0.5,
-                             data.seed = data.seed, model.seed = model.seed
+                             data.seed=NULL, model.seed=NULL
                              ){
 
   # # setting the unobserved value to na，在外部已经做过了

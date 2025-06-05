@@ -1,5 +1,4 @@
-fit_and_predict_band <- function(object, X_test, testid, cfun, quantiles=c(0.4,0.6),outparams=list(),
-                                 data.seed = data.seed, model.seed = model.seed){
+fit_and_predict_band <- function(object, X_test, testid, cfun, quantiles=c(0.4,0.6),outparams=list(),data.seed=NULL, model.seed=NULL){
   ########################################################################################
   ##  fit the regression for predicting interval, and predict the interval given data.  ##
   ########################################################################################

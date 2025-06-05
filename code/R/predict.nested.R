@@ -1,5 +1,4 @@
-predict.nested <- function(object, X, Y, T, alpha = 0.2, wthigh = 20, wtlow = 0.05,
-                            data.seed = data.seed, model.seed = model.seed){
+predict.nested <- function(object, X, Y, T, alpha = 0.2, wthigh = 20, wtlow = 0.05,data.seed=NULL, model.seed=NULL){
   ##################################################################
   ##    use group 2 data to create a bunch of prediction bands    ##
   ##################################################################

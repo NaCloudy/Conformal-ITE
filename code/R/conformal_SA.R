@@ -6,7 +6,7 @@ conformal_SA <- function(X, Y, gmm,
                          psfun=Boosting, psparams=list(),
                          trainprop=0.75, conf_wt=NULL,
                          nested=FALSE,
-                         data.seed = data.seed, model.seed = model.seed){
+                         data.seed=NULL, model.seed=NULL){
 
   T <- as.numeric(!is.na(Y))
   inds1 <- which(T == 1)
