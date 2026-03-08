@@ -1,84 +1,104 @@
 # Conformal Sensitivity Analysis for Individual Treatment Effects
 
-This project applies **Conformal Sensitivity Analysis (CSA)** to estimate prediction intervals for Individual Treatment Effects (ITE) on observational datasets, with validity guarantees under unmeasured confounding parameterized by a sensitivity parameter Γ.
+This project proposes and evaluates **Conformal Sensitivity Analysis (CSA)** methods for constructing valid prediction intervals of Individual Treatment Effects (ITE) under unmeasured confounding. The key contribution is a **CSA-Huber** variant that uses Huber regression for robustness, compared against several baselines.
 
-## Background
+## Problem Setting
 
-Standard conformal inference for ITE assumes unconfoundedness (no unmeasured confounders). This project extends the nested conformal approach from [Lei & Candes (2021)](https://github.com/lihualei71/cfcausal) with a Γ-sensitivity model: the intervals remain valid as long as the true odds ratio of selection bias does not exceed Γ. The key question asked for each test unit is whether its ITE interval contains zero — i.e., whether the treatment is **effective** under the assumed confounding level.
+In observational studies, standard conformal inference for ITE requires unconfoundedness. This project relaxes that assumption via a **Γ-sensitivity model**: the constructed intervals remain valid as long as the odds ratio of unmeasured selection bias is bounded by Γ. Larger Γ means more conservative (wider) intervals.
 
-## Methods
+The key question for each test unit: does the ITE interval contain zero — i.e., is the treatment **effective** under the assumed confounding level Γ?
 
-The core pipeline (`code/R/`) implements:
+## Methods Compared
 
-| Function | Description |
+| Method | Description |
 |---|---|
-| `nested_conformalSA` | Two-group nested approach: fits outcome models on group 1, calibrates sensitivity-adjusted conformal scores on group 2 |
-| `predict.nested` | Produces pointwise ITE bands from a fitted `nested_conformalSA` object |
-| `fit_and_predict_band` | Fits a regression model to smooth the ITE bounds and extrapolates to test set |
-| `conformal_SA` | Single-arm conformal inference with sensitivity weighting |
-| `cutoff_SA` | Computes the sensitivity-adjusted conformal cutoff under Γ |
+| **CSA-Huber** | Nested CSA with Huber regression outcome model (robust to heavy tails/outliers) — *main contribution* |
+| **CSA-M** | Nested CSA with conditional mean regression (Random Forest) |
+| **CSA-Q** | Nested CSA with conformalized quantile regression (CQR) |
+| **ITE-NUC** | Inexact nested approach from cfcausal assuming no unmeasured confounding |
+| **CSA-B** | Bonferroni/naive: union of two single-arm sensitivity intervals |
 
-Outcome models supported: Random Forest (`RF`), Quantile RF (`quantRF`), Boosting, Quantile Boosting, BART, Quantile BART, or any user-supplied function.
+All nested CSA methods follow a two-group pipeline: fit outcome models on group 1, calibrate sensitivity-adjusted conformal scores on group 2, then smooth the resulting ITE bounds via quantile regression.
 
-Two inference types are supported:
-- **mean**: standard conformal inference based on conditional mean regression
-- **CQR**: conformalized quantile regression
+## Experiments
+
+### Simulation Study (`run_tests/syn/`, `results/synthetic/`)
+
+Real datasets (VD, VK) provide the **covariate distribution** only. Synthetic outcomes are generated from known `taufun` / `taufun0` with various error distributions (normal, logistic, Student-t) and confounding types (4 cases). This gives a ground-truth ITE for evaluating:
+- **Coverage**: fraction of test units whose true ITE falls in the predicted interval
+- **Interval length**: efficiency of the intervals across methods and Γ values
+
+### Real Data Application (`run_tests/`, `results/ITE/`)
+
+Applies the methods to actual observational datasets with no known ground truth ITE. Produces sensitivity intervals as Γ varies, and classifies test units as "effectively treated" if 0 is excluded from the interval.
+
+## Datasets
+
+| Dataset | Description |
+|---|---|
+| VD | Clinical trial data with liver fibrosis markers; outcome: TGF-β at 6 months |
+| VK2 | Clinical dataset (kidney-related) |
+| bweight | Birth weight observational study |
+| drugged_AS / drugged_TS | Drug study, two arms |
+| data1 / data3 / data9 / data30 | Additional observational datasets |
+| fish | Environmental study (from Zenodo) |
+
+In simulation, VD/VK covariates are fitted with a multivariate normal and used to generate synthetic samples; the real outcome data is not used.
 
 ## Repository Structure
 
 ```
 code/
 ├── R/                      # Core algorithm implementations
-│   ├── nested_conformalSA.R
-│   ├── conformal_SA.R
-│   ├── cutoff_SA.R
-│   ├── fit_and_predict_band.R
-│   ├── predict.nested.R
-│   ├── conformalIte.R      # Original cfcausal ITE interface
-│   ├── conformalCf.R
-│   ├── util_SA.R           # Sensitivity simulation utilities
-│   └── ...
-├── data/                   # Datasets
-│   ├── VD.csv              # Clinical dataset (liver fibrosis, outcome: TGF6)
-│   ├── VK2.csv             # Clinical dataset (kidney-related)
-│   ├── bweight.csv         # Birth weight observational study
-│   ├── drugged_AS.csv      # Drug study (AS arm)
-│   ├── drugged_TS.csv      # Drug study (TS arm)
-│   ├── data1/3/9/30.csv    # Additional datasets
-│   └── fish.csv            # Fish dataset (from Zenodo)
-├── run_tests/              # Experiment entry scripts (one per dataset)
-│   ├── VD.R
-│   ├── VK.R
-│   ├── bweight.R
-│   ├── bweight_Gamma.R     # Sensitivity parameter sweep for bweight
-│   ├── drug_AS.R / drug_TS.R
-│   ├── data1/3/9/30.R
-│   └── syn/                # Synthetic data experiments (VD-syn, VK-syn, huber variants)
-├── results/                # Output CSV files
-│   ├── ITE/                # Per-dataset ITE interval results
-│   └── synthetic/          # Simulation results
-├── figures/                # Output figures
-│   ├── ITE/
-│   └── cov_len_shrinkage/  # Coverage & interval length vs Γ
+│   ├── nested_conformalSA.R    # Two-group nested CSA fit
+│   ├── conformal_SA.R          # Single-arm conformal with sensitivity weighting
+│   ├── cutoff_SA.R             # Sensitivity-adjusted conformal cutoff under Γ
+│   ├── fit_and_predict_band.R  # Smooth & extrapolate ITE bounds to test set
+│   ├── predict.nested.R        # Get ITE bands from a nested_conformalSA object
+│   ├── conformal_learners.R    # Huber, RF, quantRF, Boosting wrappers
+│   ├── conformalIte.R          # cfcausal ITE interface (nest/naive/counterfactual)
+│   └── util_SA.R               # Simulation utilities (samplecf, summary_CI, ...)
+├── data/                   # Observational datasets (CSV/xlsx)
+├── run_tests/              # Experiment entry scripts
+│   ├── VD.R / VK.R / bweight.R / ...   # Real data experiments
+│   └── syn/                             # Simulation experiments using real covariate distributions
+│       ├── VD-syn.R / VD-huber.R
+│       └── VK-syn.R / VK-huber.R / ...
+├── results/                # Output CSVs (gitignored)
+│   ├── ITE/                # Per-dataset real-data ITE results
+│   └── synthetic/          # Simulation coverage & length results
+├── figures/                # Output figures (gitignored)
 ├── plot_figures/           # Plotting scripts
-│   └── or_plot/            # Outcome regression diagnostics & final plots
-├── exp-cf/                 # Counterfactual conformal experiments (simulation)
-├── exp-ite/                # ITE conformal experiments (simulation)
+│   └── or_plot/            # Outcome regression diagnostics & final figures
+├── exp-cf/                 # Counterfactual conformal experiments (cfcausal baseline)
+├── exp-ite/                # ITE simulation experiments
 └── exp-fish/               # Fish dataset experiment
 ```
 
 ## Quickstart
 
-All scripts are run from the `code/` directory (the R package root).
+All scripts run from the `code/` directory (the R package root).
 
 **Install dependencies:**
 ```r
-install.packages(c("devtools", "randomForest", "grf", "gbm", "argparse",
-                   "dplyr", "ggplot2", "readxl"))
+install.packages(c("devtools", "randomForest", "grf", "gbm", "h2o",
+                   "MASS", "argparse", "dplyr", "ggplot2", "readxl"))
 devtools::install_github("lihualei71/cfcausal")
 ```
 
-**Run an experiment (e.g., VD dataset):**
+**Run simulation experiment (VD covariate distribution):**
+```bash
+cd code
+Rscript run_tests/syn/VD-huber.R \
+  --alpha 0.2 \
+  --cftype 2 \
+  --ntrial 50 \
+  --ntrain 2000 \
+  --ntest 5000 \
+  --seed 1
+```
+
+**Run real data experiment:**
 ```bash
 cd code
 Rscript run_tests/VD.R \
@@ -87,29 +107,21 @@ Rscript run_tests/VD.R \
   --gmm_star 3 \
   --alpha 0.2 \
   --ntrial 10 \
-  --seed1 123 \
-  --seed2 45
+  --seed1 123 --seed2 45
 ```
-
-Results are saved to `results/ITE/<data_name>-<method>/alpha_<alpha>_gmm_<gmm_star>/`.
 
 **Key CLI arguments:**
 
-| Argument | Default | Description |
-|---|---|---|
-| `--data_name` | `VD` | Dataset name (matches filename in `data/`) |
-| `--method` | `mean` | Inference type: `mean` or `cqr` |
-| `--gmm_star` | `3` | Sensitivity parameter Γ (≥ 1; Γ=1 means no unmeasured confounding) |
-| `--alpha` | `0.2` | Miscoverage level (produces 1−α prediction intervals) |
-| `--ntrial` | `10` | Number of random trials |
-| `--seed1` | `123` | Data split seed |
-| `--seed2` | `45` | Model fitting seed |
+| Argument | Description |
+|---|---|
+| `--gmm_star` | Sensitivity parameter Γ (≥ 1; Γ=1 means no unmeasured confounding assumed) |
+| `--method` | Inference type: `mean` or `cqr` |
+| `--alpha` | Miscoverage level (produces 1−α prediction intervals) |
+| `--cftype` | Confounding type for simulation (1–4, see `util_SA.R`) |
+| `--ntrain` / `--ntest` | Training / testing sample sizes for simulation |
+| `--huber_alpha` | Huber loss quantile parameter α ∈ [0,1] |
 
-## Simulation Experiments
-
-Synthetic experiments under `run_tests/syn/` and `exp-ite/` evaluate coverage and interval length across varying Γ values for homoscedastic and heteroscedastic error settings.
-
-The `exp-cf/` folder contains counterfactual conformal experiments from the original cfcausal paper, included for comparison.
+Results are saved to `results/synthetic/<dataset>/<errdist>/gmm_<Γ>/` for simulation, and `results/ITE/<data_name>-<method>/alpha_<α>_gmm_<Γ>/` for real data.
 
 ## References
 
