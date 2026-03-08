@@ -1,10 +1,11 @@
-**/.Rproj.user
-**/.Rhistory
-**/.RData
-**/.Ruserdata
-**/.DS_Store.DS_Store
+*/.Rproj.user/
+.Rhistory
+*/.RData
+*/.Ruserdata
+*/.DS_Store.DS_Store
 .Rproj.user
 code/results
 code/figures
 CLAUDE.md
 .claude/
+reports/
