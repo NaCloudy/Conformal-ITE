@@ -34,14 +34,11 @@ Applies the methods to actual observational datasets with no known ground truth 
 
 ## Datasets
 
-| Dataset | Description |
+| Dataset | Usage |
 |---|---|
-| VD | Clinical trial data with liver fibrosis markers; outcome: TGF-β at 6 months |
-| VK2 | Clinical dataset (kidney-related) |
-| bweight | Birth weight observational study |
-| drugged_AS / drugged_TS | Drug study, two arms |
-| data1 / data3 / data9 / data30 | Additional observational datasets |
-| fish | Environmental study (from Zenodo) |
+| VD | Simulation (covariate distribution) + real data application; liver fibrosis markers, outcome: TGF-β at 6 months |
+| VK2 | Simulation (covariate distribution) + real data application |
+| fish | Real data experiment from the original cfcausal paper (Lei & Candès 2021) |
 
 In simulation, VD/VK covariates are fitted with a multivariate normal and used to generate synthetic samples; the real outcome data is not used.
 
