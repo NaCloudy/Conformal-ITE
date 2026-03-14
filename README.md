@@ -24,7 +24,7 @@ All nested CSA methods follow a two-group pipeline: fit outcome models on group 
 
 ### Simulation Study (`run_tests/syn/`, `results/synthetic/`)
 
-Real datasets (VK, VD) provide the **covariate distribution** only. Synthetic outcomes are generated from known `taufun` / `taufun0` with three error distributions (normal, logistic, polluted normal) across Γ ∈ {1, 2, 3}. This gives a ground-truth ITE for evaluating:
+Real datasets (VK, VD, Glutathione) provide the **covariate distribution** only. Synthetic outcomes are generated from known `taufun` / `taufun0` with three error distributions (normal, logistic, polluted normal) across Γ ∈ {1, 2, 3}. This gives a ground-truth ITE for evaluating:
 - **Coverage**: fraction of test units whose true ITE falls in the predicted interval
 - **Interval length**: efficiency of the intervals across methods and Γ values
 
@@ -46,15 +46,14 @@ Applies CSA-Mean to three clinical datasets. Produces sensitivity intervals as �
 |---|---|---|---|
 | VK2 | `data/VK2.csv` | 120 | Simulation (covariate distribution) + real data application |
 | VD | `data/VD.csv` | 75 | Simulation (covariate distribution) + real data application |
-| Glutathione | `data/` | 50 | Real data application only |
+| Glutathione | `data/data1.xlsx` | 50 | Simulation (covariate distribution) + real data application |
 
-In simulation, VK/VD covariates are fitted with a multivariate normal and used to generate synthetic samples; the real outcome data is not used.
+In simulation, covariates are fitted with a multivariate normal and used to generate synthetic samples; real outcome data is not used.
 
 ## Repository Structure
 
 ```
-code/
-├── R/                      # Core algorithm implementations
+R/                          # Core algorithm implementations
 │   ├── nested_conformalSA.R    # Two-group nested CSA fit
 │   ├── conformal_SA.R          # Single-arm conformal with sensitivity weighting
 │   ├── cutoff_SA.R             # Sensitivity-adjusted conformal cutoff under Γ
@@ -63,25 +62,24 @@ code/
 │   ├── conformal_learners.R    # RF, Quantile RF, Huber Boosting wrappers
 │   ├── conformalIte.R          # cfcausal ITE interface (nest/naive/counterfactual)
 │   └── util_SA.R               # Simulation utilities (samplecf, summary_CI, ...)
-├── data/                   # Observational datasets (CSV/xlsx)
-├── run_tests/              # Experiment entry scripts
-│   ├── VD.R / VK.R / ...               # Real data experiments
-│   └── syn/                            # Simulation experiments
+data/                       # Observational datasets (CSV/xlsx)
+run_tests/                  # Experiment entry scripts
+│   ├── VD.r / vk.R / data1.R  # Real data experiments (per dataset)
+│   └── syn/                    # Simulation experiments
 │       ├── VD-syn.R / VD-huber.R
-│       └── VK-syn.R / VK-huber.R / ...
-├── results/                # Output CSVs (gitignored)
+│       ├── VK-syn.R / VK-huber.R
+│       └── data1-syn.R / data1-huber.R
+results/                    # Output CSVs (gitignored)
 │   ├── ITE/                # Per-dataset real-data ITE results
 │   └── synthetic/          # Simulation coverage & length results
-├── figures/                # Output figures (gitignored)
-├── plot_figures/           # Plotting scripts
-├── exp-cf/                 # Counterfactual conformal experiments
-├── exp-ite/                # ITE simulation experiments
-└── exp-fish/               # Glutathione dataset experiment
+figures/                    # Output figures (gitignored)
+plot_figures/               # Plotting scripts
+ref/                        # Reference experiment scripts (exp-cf, exp-ite, exp-fish)
 ```
 
 ## Quickstart
 
-All scripts run from the `code/` directory (the R package root).
+All scripts run from the **repository root** (the R package root).
 
 **Install dependencies:**
 ```r
@@ -92,7 +90,6 @@ devtools::install_github("lihualei71/cfcausal")
 
 **Run simulation experiment (VK covariate distribution):**
 ```bash
-cd code
 Rscript run_tests/syn/VK-syn.R \
   --alpha 0.2 \
   --cftype 2 \
@@ -104,8 +101,7 @@ Rscript run_tests/syn/VK-syn.R \
 
 **Run real data experiment:**
 ```bash
-cd code
-Rscript run_tests/VK.R \
+Rscript run_tests/vk.R \
   --data_name VK \
   --method mean \
   --gmm_star 3 \
